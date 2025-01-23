@@ -1,0 +1,4 @@
+1.  a painting of a night scene
+2.  a [musical](https://www.collinsdictionary.com/dictionary/english/musical "Definition of musical") [composition](https://www.collinsdictionary.com/dictionary/english/composition "Definition of composition"), esp. for the piano, of a [romantic](https://www.collinsdictionary.com/dictionary/english/romantic "Definition of romantic") or [dreamy](https://www.collinsdictionary.com/dictionary/english/dreamy "Definition of dreamy") [character](https://www.collinsdictionary.com/dictionary/english/character "Definition of character") [thought](https://www.collinsdictionary.com/dictionary/english/thought "Definition of thought") [appropriate](https://www.collinsdictionary.com/dictionary/english/appropriate "Definition of appropriate") to night
+
+**Термін який позначає загадкову нічну атмосферу, вперше використаний в музиці. Описує загадковість темного нічного часу, в якому відбуваються таємні та жахливі вбивства.**
