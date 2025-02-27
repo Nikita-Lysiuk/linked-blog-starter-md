@@ -1,3 +1,0 @@
-loreum ipsum
-
-Nikita Gey
