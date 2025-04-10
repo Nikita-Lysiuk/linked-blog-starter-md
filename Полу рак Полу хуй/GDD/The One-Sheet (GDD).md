@@ -7,6 +7,7 @@ Rating: **M17**
 A train conductor takes a detective with a slight hangover by surprise. There has been a murder on the train and he may be the only one who can find the hidden truth in hot pursuit. Reconstruct the events with the evidence you have, interrogate passengers, or force information out of them. Expose the little lies of your fellow travellers to put together the puzzle of your case. Time is running out!
 
 **Game Outline:**
+You're a detective whose goal is to add another solved case to his track record, but in a limited time. Reconstruct events, find clues and interview strangers. The dynamic dice system will impose status effects on the dice depending on various situations. Find consumables to help you in difficult situations
 *тут ще наєбеним*
 
 **USP** 
