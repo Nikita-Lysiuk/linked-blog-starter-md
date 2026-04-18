@@ -1,36 +1,35 @@
 ---
 type: domain
-title: "Entities Index"
-created: 2026-04-18
-updated: 2026-04-18
+title: Entities Index
+created: '2026-04-18T00:00:00.000Z'
+updated: '2026-04-18T00:00:00.000Z'
 tags:
   - meta
   - entities
-status: seed
-page_count: 0
+status: developing
+page_count: 6
 ---
 
 # Entities
 
-> People, organizations, libraries, repositories, and tools referenced across the wiki.
+> C++ classes, interfaces, and data assets that form the Nocturne codebase. For people/orgs/tools, type is `person`/`organization`/`tool`.
 
-> **Note:** This is the *general* entities index (people, orgs, tools). For ECS game entities, see [[ecs/entities/_index]].
+## C++ Classes — AI Subsystem
 
-## All Entities
+| Entity | Type | Header | Purpose |
+|--------|------|--------|---------|
+| [[APR_BaseAI]] | `class` | `Public/AI/PR_BaseAI.h` | Base pawn for all NPCs — Guards, Officers, Civilians |
+| [[APR_AIController]] | `class` | `Public/AI/PR_AIController.h` | Perception, alert tracking, P2 ability entry points |
+| [[UPR_AIMemoryComponent]] | `component` | `Public/AI/Components/PR_AIMemoryComponent.h` | Consciousness state + P2 snapshot API |
+| [[UPR_EnemyConfig]] | `data-asset` | `Public/AI/PR_EnemyConfig.h` | All per-enemy tunable parameters |
+| [[IPR_AIAbilityTarget]] | `interface` | `Public/Interfaces/PR_AIAbilityTarget.h` | P1/P2 ability interaction boundary |
 
-_None yet._
+## C++ Classes — Core
 
----
-
-## Entity Types
-
-| Type | Examples |
-|------|---------|
-| `person` | Authors, architects, game designers |
-| `organization` | Studios, companies, open-source orgs |
-| `library` | Unity, Godot, DOTS, Burst Compiler |
-| `repository` | GitHub repos referenced in docs |
-| `tool` | Profilers, debuggers, pipeline tools |
+| Entity | Type | Header | Purpose |
+|--------|------|--------|---------|
+| [[APR_BasePlayer]] | `class` | `Public/Core/PR_BasePlayer.h` | Abstract player base — Enhanced Input, grapple, stealth |
 
 ## Related
 - [[wiki/index]] — master catalog
+- [[AI System Architecture]] — how these classes interconnect

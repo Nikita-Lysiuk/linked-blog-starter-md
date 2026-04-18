@@ -1,106 +1,111 @@
 ---
 type: decision
-title: "Universal Ability System Interface"
-created: 2026-04-18
-updated: 2026-04-18
+title: 'Ability Architecture — Why BT-Driven State, Not Custom Ability Manager'
+created: '2026-04-18T00:00:00.000Z'
+updated: '2026-04-18T00:00:00.000Z'
 tags:
   - technical-architecture
   - adr
   - persival
   - ability-system
   - sprint
-status: proposed
+status: decided
 priority: 1
 related:
-  - "[[Ability System Interface]]"
-  - "[[Disguise Steal]]"
-  - "[[game-design/technical-architecture/_index]]"
-sources: []
+  - '[[Ability System Interface]]'
+  - '[[AI System Architecture]]'
+  - '[[Disguise Steal]]'
+  - '[[Mind Copy]]'
+  - '[[game-design/technical-architecture/_index]]'
 ---
 
-# Universal Ability System Interface
+# Ability Architecture — Why BT-Driven State, Not Custom Ability Manager
 
 **Project:** Persival
-**Scope:** All hero abilities in the game — Disguise Steal and all future abilities
-**Status:** Proposed — pending prototype validation
+**Status:** Decided and implemented
+**Replaces:** Earlier proposal for `IAbilitySystem` + `UAbilityManagerComponent` (discarded — never built)
+
+> [!correction] The previous version of this note proposed `IAbilitySystem::ExecuteAbility/CancelAbility` and `UAbilityManagerComponent`. **None of that was implemented.** The actual architecture is described here.
 
 ---
 
 ## Problem
 
-Persival will have multiple hero abilities (Disguise Steal, more TBD). Without a unified interface, each ability becomes a bespoke implementation with no shared lifecycle contract. This leads to:
-- Duplicate cooldown logic per ability
-- No common cancel/interrupt path
-- Difficult to add new abilities without touching existing systems
-- No ability to stack, queue, or composite abilities at runtime
+Two player abilities (P1 FaceSteal, P2 MindCopy) need to affect AI characters without creating tight coupling between player code and AI class hierarchy. Additionally, the AI needs complex, time-sequenced behavior after an ability fires (disorientation freeze → behavior change → expiry restore) — behavior that must integrate with UE5's Behavior Tree.
 
 ---
 
-## Solution: IAbilitySystem Contract
+## Options Evaluated
 
-Every hero ability in Persival implements `IAbilitySystem` (see [[Ability System Interface]]). The interface enforces a minimal lifecycle contract:
+### Option A: `IAbilitySystem` + `UAbilityManagerComponent` (rejected)
+Custom `ExecuteAbility / CancelAbility` interface on a manager component attached to the player.
 
-```
-Execute → [Active] → Cancel | Expire → Cooldown → Ready
-```
+**Problems:**
+- Ability effects need time-sequenced BT integration (disorientation → replaced state → expiry). An `ExecuteAbility` call can't cleanly hand off to BT tasks.
+- Duplicates BT's own state management — two state machines fighting each other.
+- Cooldown/duration logic belongs in config (DataAsset), not in an ability object.
 
-The system is **intentionally minimal**. If GAS (Unreal's Gameplay Ability System) is adopted later, this interface becomes an adapter layer — not a replacement.
+### Option B: Unreal GAS (rejected for now)
+Gameplay Ability System — industry standard, replication built-in.
 
----
+**Problems:**
+- Large footprint: ASC on every NPC, Attribute Sets, Gameplay Effects — overkill for 2 abilities.
+- Steep learning curve for a 3-person team at prototype stage.
+- GAS prediction system would be wasted work (local splitscreen, no online yet).
 
-## Architecture Overview
+### Option C: BT-Driven State + Interface Boundary (chosen)
+Abilities change `ConsciousnessState` via `UPR_AIMemoryComponent`. The BT responds to state changes natively. All time-sequenced behavior lives in BT tasks and services.
 
-```
-APlayerCharacter
-└── UAbilityManagerComponent
-    ├── TArray<TScriptInterface<IAbilitySystem>> ActiveAbilities
-    ├── GrantAbility(TScriptInterface<IAbilitySystem>)
-    ├── ActivateAbility(int32 SlotIndex, AActor* Instigator)
-    └── CancelAllAbilities()
-
-IAbilitySystem  ← [[Ability System Interface]]
-    ├── ExecuteAbility(AActor* Instigator)
-    ├── CancelAbility()
-    ├── GetCooldownRemaining() const
-    └── IsOnCooldown() const
-
-UDisguiseAbility : UObject, IAbilitySystem  ← [[Disguise Steal]]
-UFutureAbility   : UObject, IAbilitySystem  ← (future)
-```
+**Advantages:**
+- BT is already the AI's control system — no second state machine.
+- `DisorientDuration`, `MindReplaceDuration` live in `UPR_EnemyConfig` DataAssets — tunable per enemy type.
+- `IPR_AIAbilityTarget` interface isolates player code from AI class hierarchy.
+- Replication is simple: replicate `ConsciousnessState`, keep snapshots server-only.
 
 ---
 
-## Design Decisions
+## Implemented Architecture
 
-### 1. Custom interface vs. Unreal GAS
-| Approach | Pros | Cons |
-|----------|------|------|
-| Custom `IAbilitySystem` | Lightweight, full control, no GAS boilerplate | Manual replication, no prediction |
-| Unreal GAS | Industry-standard, replication built-in | High learning curve, large footprint for small team |
-| **Chosen: Custom first** | Prototype fast, adapt later | Will need GAS adapter if multiplayer added |
+```
+Player Ability Code
+  │ (uses only IPR_AIAbilityTarget — no concrete casts)
+  ▼
+IPR_AIAbilityTarget
+  ├── CanBeTargetedByAbility()       → gate (mechanical enemies immune)
+  ├── GetMemoryComponent()           → UPR_AIMemoryComponent
+  └── GetCurrentConsciousnessState() → EAIConsciousnessState
 
-> [!contradiction] Multiplayer Risk
-> If Persival adds multiplayer, the custom interface will need to be retrofitted with prediction and replication. GAS handles this natively. Flag this as a review trigger for the ADR.
+UPR_AIMemoryComponent
+  ├── SetConsciousnessState(State)   → replicates, broadcasts delegate
+  ├── TakeSnapshot(BB)               → P2 Copy
+  ├── TakeOwnStateSnapshot(BB)       → Paste B pre-save
+  └── Restore* methods               → called from controller
 
-### 2. Ability activation: direct call vs. queued
-Current decision: **direct call** via `UAbilityManagerComponent::ActivateAbility()`. No queue. Abilities cancel each other. This fits single-player stealth; revisit for combo systems.
+APR_AIController
+  ├── ApplyPasteA()                  → sets Overwritten + BB timing keys
+  └── ApplyPasteB()                  → sets Overwritten + Replaced timing
 
-### 3. Cooldown ownership
-Cooldown is owned by the **ability itself** (stored in the `IAbilitySystem` implementer), not by the manager. Manager queries `IsOnCooldown()` before activating.
+BT_AIBase (priority selector)
+  ├── ConsciousnessState != Normal → BT_ControlledByPlayer subtree
+  │     ├── BTTask_PR_HandleFrozen         (P1)
+  │     ├── BTTask_PR_HandleOverwritten    (P2 transition)
+  │     └── [Replaced: standard BT with donor BB state]
+  └── Standard patrol / alert / investigate branches
+```
 
 ---
 
 ## Review Trigger
 
-Revisit this ADR if:
-- Multiplayer / co-op is added → switch to GAS
-- Ability queuing or combos are needed → add queue layer to `UAbilityManagerComponent`
-- More than 6 abilities exist → evaluate if custom system scales
+Revisit this decision if:
+- **Online multiplayer** becomes a goal → GAS prediction becomes valuable; this architecture maps cleanly onto an adapter layer
+- **More than ~6 abilities** are planned → evaluate if BT task proliferation is acceptable
+- **Ability combos / queuing** are needed → add explicit queue layer between player input and `SetConsciousnessState`
 
 ---
 
 ## Related
-- [[Ability System Interface]] — C++ interface definition (virtual functions)
-- [[Disguise Steal]] — first ability implementing this contract
-- [[decisions/_index]] — promote to formal ADR when accepted
-- [[meta/logbook]] — decision history
+- [[Ability System Interface]] — `IPR_AIAbilityTarget` interface definition
+- [[AI System Architecture]] — full system map
+- [[Consciousness State Machine]] — state transitions in detail
+- [[Disguise Steal]], [[Mind Copy]] — the two abilities this architecture serves

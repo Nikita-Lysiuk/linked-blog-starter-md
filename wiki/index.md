@@ -48,9 +48,9 @@ status: developing
 |--------|-------|-------|
 | Sources | [[sources/_index]] | 1 |
 | Concepts | [[concepts/_index]] | 1 |
-| Entities | [[entities/_index]] | 0 |
+| Entities | [[entities/_index]] | 6 |
 | Patterns | [[patterns/_index]] | 3 |
-| Game Design | [[game-design/_index]] | 2 |
+| Game Design | [[game-design/_index]] | 7 |
 | ECS Registry | [[ecs/_index]] | 0 |
 | Decisions (ADRs) | [[decisions/_index]] | 0 |
 | Questions | [[questions/_index]] | 0 |
