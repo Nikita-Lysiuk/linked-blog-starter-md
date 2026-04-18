@@ -1,110 +1,139 @@
 ---
 type: mechanic
-title: "Disguise Steal"
-created: 2026-04-18
-updated: 2026-04-18
+title: Disguise Steal (FaceSteal)
+created: '2026-04-18T00:00:00.000Z'
+updated: '2026-04-18T00:00:00.000Z'
 tags:
   - mechanic
   - sprint
   - persival
   - stealth
-status: designed
+  - p1
+status: implementing
 priority: 1
 loop_tier: core
 related:
-  - "[[Universal Ability System Interface]]"
-  - "[[Ability System Interface]]"
-  - "[[game-design/mechanics/_index]]"
+  - '[[IPR_AIAbilityTarget]]'
+  - '[[APR_BaseAI]]'
+  - '[[UPR_AIMemoryComponent]]'
+  - '[[UPR_EnemyConfig]]'
+  - '[[Consciousness State Machine]]'
+  - '[[Mind Copy]]'
+  - '[[game-design/mechanics/_index]]'
 sources: []
 ---
 
-# Disguise Steal
+# Disguise Steal (FaceSteal)
 
-**Project:** Persival
+**Project:** Persival — P1 ability
 **Loop Tier:** Core
-**Status:** `designed` — awaiting prototype
+**Status:** `implementing` — infrastructure complete, player-facing activation component TBD
 
 ---
 
 ## Design Intent
 
-The player can target a guard within range and "steal" their appearance — copying their skeletal mesh and material overrides to disguise themselves as that specific guard. While disguised, enemy AI perception treats the player as a neutral or allied guard until the disguise breaks.
+P1 targets a guard and steals their **identity tags** — not their mesh, their *faction identity*. The AI world runs on `GameplayTags`. P1 injects the target NPC's `RuntimeTags` (e.g. `AI.Type.Guard`) into their own tag container; every NPC's perception query then returns "friendly". The fear is not of being *seen*, but of being *recognised*.
 
-The mechanic creates **high-tension identity games**: you are the enemy. The fear is not of being seen, but of being *recognized*.
+The stolen NPC is **frozen in place** for the duration — a live prop. This creates a tight spatial tension: stay within `FaceStealRange` or lose cover.
+
+---
+
+## Mechanism (code-accurate)
+
+### Activation
+1. P1 targets an NPC — must implement `IPR_AIAbilityTarget` with `CanBeTargetedByAbility() == true`.
+2. NPC's `ConsciousnessState` → **`Frozen`** via `UPR_AIMemoryComponent::SetConsciousnessState()`.
+3. `BTTask_PR_HandleFrozen` runs — holds the NPC indefinitely until state changes externally.
+4. NPC's `RuntimeTags` (e.g. `AI.Type.Guard`, faction tags) are **copied onto P1's tag container**.
+5. AI perception queries read P1's tags → P1 reads as a friendly guard.
+
+### Range Constraint
+- P1 must remain within **`FaceStealRange`** (float, cm — configured per-enemy in `UPR_EnemyConfig`).
+- **Exiting range:** tags removed from P1. NPC remains `Frozen`.
+- **Re-entering range:** tags restored to P1.
+
+### Deactivation
+- Manual cancel — OR — new target is selected (overwrites previous).
+- NPC's `ConsciousnessState` → **`Normal`**. `BTTask_PR_HandleFrozen` is aborted externally.
+- NPC resumes its Behavior Tree from the root.
+
+### Immunity
+- Mechanical enemies set `bCanBeTargetedByAbility = false` in their `UPR_EnemyConfig` DataAsset.
+- `IPR_AIAbilityTarget::CanBeTargetedByAbility()` gates access — ability fails silently on immune targets.
 
 ---
 
 ## Inputs & Outputs
 
-| Input | Output | Feedback |
-|-------|--------|----------|
-| Player activates ability on targeted guard | Player mesh swapped to guard's mesh + materials | Visual shimmer transition effect |
-| Guard is incapacitated or dead | Disguise source available | Contextual prompt appears |
-| Player attacks while disguised | Disguise instantly broken | Flash + alarm state triggered |
-| Cooldown expires | Disguise expires | Shimmer fade-out, player mesh restores |
-| Player re-activates or presses cancel | Disguise cancelled early | Same fade-out animation |
+| Input | Output |
+|-------|--------|
+| P1 activates on valid NPC within FaceStealRange | NPC frozen; P1 gains NPC's RuntimeTags |
+| P1 exits FaceStealRange | Tags removed from P1; NPC stays Frozen |
+| P1 re-enters FaceStealRange | Tags restored to P1 |
+| P1 cancels or selects new target | Tags removed; NPC returns to Normal |
+| Target has `bCanBeTargetedByAbility = false` | Ability fails silently |
 
 ---
 
-## Rules
+## Why Tags, Not Mesh Swap
 
-1. Target must be a valid `AGuardCharacter` within `DisguiseRange` (default: 200 units).
-2. The guard must be incapacitated, dead, or in a specific social state (e.g., `Idle`, `Patrol`) — not in combat or on alert.
-3. Disguise duration is capped by `DisguiseDuration` (default: 60s) — visible timer in HUD.
-4. Any hostile action (attack, vault, sprint above threshold) breaks the disguise.
-5. Guards with `BDisguiseAware` flag enabled will detect disguise at close range.
-6. Cooldown begins on cancellation or expiry, not on activation.
+AI perception in Nocturne identifies friend/foe via **GameplayTags** (`AI.Type.Guard`, `AI.Faction.Mansion`), not via skeletal mesh or class type. P1 literally *becomes* the tag set the NPC system trusts — no perception override hooks needed, no material swaps, no `UDisguiseComponent`.
 
-## Edge Cases
+Implication: two NPCs sharing the same tags are perceptually indistinguishable. P1 wearing either identity works identically from the AI's perspective. Visual mesh difference is cosmetic only.
 
-- What happens when the source guard is revived while player is disguised? → Disguise should break (two of the same guard = immediate suspicion).
-- What if the player dies while disguised? → Mesh restores to default on respawn.
-- Multiple guards of same archetype (identical mesh)? → Disguise is still per-instance (tracks the specific guard actor).
-
-> [!gap] Disguise Detection Radius
-> No design decision yet on whether `BDisguiseAware` guards detect based on distance only or also player behavior (running, weapon drawn). File ADR when decided.
-
----
-
-## Loop Integration
-
-**Feeds into:** [[game-design/loop-logic/_index]] — Core stealth loop
-**Enables:** Social navigation, guard manipulation, infiltration paths
-**Depends on:** AI Perception system (AIPerceptionComponent), Guard state machine
-
-> [!contradiction] Disguise vs. Alert State
-> If a guard goes into combat-alert while player is wearing their disguise, does the disguise break? Current design says "alert state breaks disguise" — but this hasn't been reconciled with the guard revive edge case above. Both rules need to be unified in one state machine.
+> [!note] Tag system source
+> `APR_BaseAI::RuntimeTags` — `FGameplayTagContainer`, replicated (`PR_BaseAI.h:196`).
+> Initialized from `UPR_EnemyConfig::DefaultTags` at `BeginPlay` (server-only). Clients updated via `OnRep_RuntimeTags`.
 
 ---
 
 ## Technical Implementation
 
-→ [[Universal Ability System Interface]]
-→ [[Ability System Interface]]
+| Concern | Source |
+|---------|--------|
+| Interface boundary | [[IPR_AIAbilityTarget]] |
+| State lock | [[UPR_AIMemoryComponent]]`::SetConsciousnessState(Frozen)` |
+| BT lock task | `BTTask_PR_HandleFrozen` — returns `InProgress` indefinitely |
+| Range config | `UPR_EnemyConfig::FaceStealRange` — `PR_EnemyConfig.h:193–196` |
+| Tag source | `APR_BaseAI::GetRuntimeTags()` — `PR_BaseAI.h:122` |
+| Tag manipulation | `AddGameplayTag` / `RemoveGameplayTag` — `PR_BaseAI.h:128–133` |
+| Frozen state definition | `EAIConsciousnessState::Frozen` — `PR_AITypes.h:21` |
 
-**UE5 Systems involved:**
-- `UAbilitySystemComponent` (GAS) or custom `IAbilitySystem` interface
-- `USkeletalMeshComponent` — mesh + material swap
-- `UAIPerceptionSystem` — faction/perception override while disguised
-- `UMaterialInstanceDynamic` — runtime material override per-slot
+**No mesh swap. No `UDisguiseComponent`. No `IAbilitySystem`. No duration timer or cooldown in current code.**
 
-**ECS / Actor Components required:**
-- `UDisguiseComponent` — holds stolen mesh ref, duration timer, break conditions
-- `UStealthStatusComponent` — tracks disguise state, AI awareness level
+---
 
-**Patterns used:**
-- [[Observer]] — notify AI perception system on disguise state change
-- [[Ability System Interface]] — IAbilitySystem::ExecuteAbility, CancelAbility, Cooldown
+## Open Questions / Edge Cases
+
+> [!gap] Player-facing activation component not yet implemented
+> The P1-side component that calls `AddGameplayTag` on the player and `SetConsciousnessState(Frozen)` on the NPC has not been written. Infrastructure (interface, frozen task, tag system) is complete.
+
+> [!question] P2 Paste A on a Frozen NPC?
+> `SetConsciousnessState(Normal)` from Paste A restore would break P1's disguise mid-use. Interaction between abilities not yet specified — needs a cooperative design pass.
+
+> [!question] Two NPCs with identical RuntimeTags?
+> Wearing either identity is functionally equivalent. Needs a level-design guideline for guard roles.
+
+---
+
+## Loop Integration
+
+**Feeds into:** Core stealth loop — social infiltration
+**Enables:** Passing guard checkpoints, blending into patrols, P1+P2 cooperative distraction
+**Depends on:** [[APR_BaseAI]] tag system, [[Consciousness State Machine]], [[IPR_AIAbilityTarget]]
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Design spec complete ✓
-- [ ] [[Universal Ability System Interface]] note linked ✓
-- [ ] `UDisguiseComponent` implemented in C++
-- [ ] Mesh/material swap working in prototype
-- [ ] AI perception correctly overridden during disguise
-- [ ] Cooldown and duration timers functional
-- [ ] All break conditions tested (attack, revival, alert)
-- [ ] HUD timer integrated
+- [x] Tag system implemented (`APR_BaseAI::RuntimeTags`, replicated)
+- [x] `Frozen` state + `BTTask_PR_HandleFrozen` implemented
+- [x] `IPR_AIAbilityTarget` interface implemented on `APR_BaseAI`
+- [x] `bCanBeTargetedByAbility` immunity flag on `UPR_EnemyConfig`
+- [ ] P1 ability activation component written
+- [ ] Tag copy/restore on enter/exit FaceStealRange
+- [ ] FaceStealRange debug visualisation (sphere)
+- [ ] NPC correctly returns to Normal on deactivation
+- [ ] Mechanical enemy immunity tested
+- [ ] P1+P2 interaction edge case defined and tested

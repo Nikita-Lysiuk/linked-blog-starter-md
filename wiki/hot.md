@@ -1,7 +1,7 @@
 ---
 type: meta
 title: "Hot Cache"
-updated: 2026-04-18T00:00:00
+updated: 2026-04-18T14:00:00
 tags:
   - meta
   - hot-cache
@@ -20,11 +20,9 @@ tags:
 
 ## Active Technical Roadblocks
 
-1. **Git migration:** `Git/.git` has real commits + remote (`github.com/pakamaka345/linked-blog-starter-md`). New root-level `.git` initialized. Need to: (a) add remote to root repo, (b) decide whether to import history, (c) then delete `Git/.git`. **Do not delete until confirmed.**
+1. **Disguise Steal — Contradict unresolved:** Alert-state behavior during disguise (does combat-alert break disguise?) not yet decided. Filed in mechanic note. Needs ADR.
 
-2. **Disguise Steal — Contradict unresolved:** Alert-state behavior during disguise (does combat-alert break disguise?) not yet decided. Filed in mechanic note. Needs ADR.
-
-3. **IAbilitySystem — Interrupt priority:** No priority system for simultaneous ability activations. Works for now; must resolve before second ability is implemented.
+2. **IAbilitySystem — Interrupt priority:** No priority system for simultaneous ability activations. Works for now; must resolve before second ability is implemented.
 
 ## Key Recent Facts
 - `IAbilitySystem` interface designed with `ExecuteAbility`, `CancelAbility`, `GetCooldownRemaining`, `IsOnCooldown`

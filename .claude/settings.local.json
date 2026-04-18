@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C \"C:/Projects/Obsidian Vault/Git\" log --oneline -5)"
+      "Bash(git -C \"C:/Projects/Obsidian Vault/Git\" log --oneline -5)",
+      "Bash(schtasks /query /fo LIST)"
     ]
   }
 }
