@@ -1,0 +1,81 @@
+/* ============================================================
+   TECHNICAL INTELLIGENCE & GAME DESIGN ENGINE — Vault Colors
+   Enable: Settings > Appearance > CSS Snippets > vault-colors
+   ============================================================ */
+
+:root {
+  --wiki-sources:      #ce9178;  /* rust/orange — raw intel */
+  --wiki-concepts:     #dcdcaa;  /* yellow — abstracted knowledge */
+  --wiki-entities:     #c586c0;  /* purple — people, orgs, tools */
+  --wiki-patterns:     #4fc1ff;  /* bright blue — design patterns */
+  --wiki-game-design:  #9cdcfe;  /* light blue — game systems */
+  --wiki-ecs:          #6a9955;  /* green — ECS registry */
+  --wiki-decisions:    #569cd6;  /* blue — ADRs */
+  --wiki-meta:         #808080;  /* gray — operational meta */
+  --wiki-raw:          #555555;  /* dimmed — raw sources */
+  --wiki-fixme:        #d16969;  /* red — debt */
+}
+
+/* ── Folder colors in the file explorer ────────────────────── */
+.nav-folder-title[data-path^="wiki/sources"]               { color: var(--wiki-sources); }
+.nav-folder-title[data-path^="wiki/concepts"]              { color: var(--wiki-concepts); }
+.nav-folder-title[data-path^="wiki/entities"]              { color: var(--wiki-entities); }
+.nav-folder-title[data-path^="wiki/patterns"]              { color: var(--wiki-patterns); font-weight: 600; }
+.nav-folder-title[data-path^="wiki/game-design"]           { color: var(--wiki-game-design); font-weight: 600; }
+.nav-folder-title[data-path^="wiki/game-design/mechanics"] { color: var(--wiki-game-design); }
+.nav-folder-title[data-path^="wiki/game-design/loop-logic"]{ color: var(--wiki-game-design); }
+.nav-folder-title[data-path^="wiki/game-design/level"]     { color: var(--wiki-game-design); }
+.nav-folder-title[data-path^="wiki/game-design/technical"] { color: var(--wiki-patterns); }
+.nav-folder-title[data-path^="wiki/ecs"]                   { color: var(--wiki-ecs); font-weight: 600; }
+.nav-folder-title[data-path^="wiki/decisions"]             { color: var(--wiki-decisions); }
+.nav-folder-title[data-path^="wiki/questions"]             { color: var(--wiki-ecs); }
+.nav-folder-title[data-path^="wiki/comparisons"]           { color: var(--wiki-fixme); }
+.nav-folder-title[data-path^="wiki/meta"]                  { color: var(--wiki-meta); }
+.nav-folder-title[data-path^=".raw"]                       { color: var(--wiki-raw); opacity: 0.6; }
+.nav-folder-title[data-path^="_templates"]                 { color: var(--wiki-meta); opacity: 0.7; }
+
+/* ── File tint for #fixme and #refactor (Properties panel) ── */
+/* Note: Obsidian doesn't expose per-note file colors via CSS alone.
+   Use the Iconize plugin for per-folder icons instead. */
+
+/* ── Custom callouts ─────────────────────────────────────────*/
+.callout[data-callout='contradiction'] {
+  --callout-color: 209, 105, 105;
+  --callout-icon: lucide-alert-triangle;
+}
+.callout[data-callout='gap'] {
+  --callout-color: 220, 220, 170;
+  --callout-icon: lucide-help-circle;
+}
+.callout[data-callout='key-insight'] {
+  --callout-color: 79, 193, 255;
+  --callout-icon: lucide-lightbulb;
+}
+.callout[data-callout='stale'] {
+  --callout-color: 128, 128, 128;
+  --callout-icon: lucide-clock;
+}
+.callout[data-callout='sprint'] {
+  --callout-color: 156, 220, 254;
+  --callout-icon: lucide-zap;
+}
+.callout[data-callout='fixme'] {
+  --callout-color: 209, 105, 105;
+  --callout-icon: lucide-bug;
+}
+
+/* ── Graph view: node colors (set manually in Graph settings) ─
+   Blue    (#4fc1ff): path:wiki/patterns
+   Purple  (#c586c0): path:wiki/entities
+   Yellow  (#dcdcaa): path:wiki/concepts
+   Orange  (#ce9178): path:wiki/sources
+   Green   (#6a9955): path:wiki/ecs
+   Lt Blue (#9cdcfe): path:wiki/game-design
+   Gray    (dimmed):  path:.raw
+   ── ────────────────────────────────────────────────────────── */
+
+/* ── Tag highlight in reading view ─────────────────────────── */
+a.tag[href="#fixme"]   { background-color: rgba(209,105,105,0.2); color: var(--wiki-fixme); }
+a.tag[href="#refactor"]{ background-color: rgba(220,220,170,0.15); color: var(--wiki-concepts); }
+a.tag[href="#sprint"]  { background-color: rgba(79,193,255,0.15);  color: var(--wiki-patterns); }
+a.tag[href="#orphan"]  { background-color: rgba(128,128,128,0.2);  color: var(--wiki-meta); }

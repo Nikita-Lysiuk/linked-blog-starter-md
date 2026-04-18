@@ -1,0 +1,23 @@
+{
+	"nodes":[
+		{"id":"start","type":"text","text":"## START\nPlayer Entry Point\n\n*What does the player see first?*","x":-600,"y":0,"width":200,"height":120,"color":"5"},
+		{"id":"core-action","type":"text","text":"## CORE ACTION\nPrimary Mechanic\n\n*What does the player DO?*","x":-300,"y":0,"width":220,"height":120,"color":"1"},
+		{"id":"feedback","type":"text","text":"## FEEDBACK\nImmediate Response\n\n*What does the game DO back?*","x":0,"y":0,"width":220,"height":120,"color":"3"},
+		{"id":"reward","type":"text","text":"## REWARD\nProgression\n\n*What changes? XP, loot, state?*","x":300,"y":0,"width":220,"height":120,"color":"6"},
+		{"id":"decision","type":"text","text":"## DECISION POINT\nBranching\n\n*What choice does the player make next?*","x":0,"y":200,"width":220,"height":120,"color":"4"},
+		{"id":"win","type":"text","text":"## WIN STATE\n\n*Loop exit — success condition*","x":300,"y":200,"width":200,"height":100,"color":"5"},
+		{"id":"fail","type":"text","text":"## FAIL STATE\n\n*Loop exit — failure condition*","x":300,"y":-150,"width":200,"height":100,"color":"6"},
+		{"id":"loop-back","type":"text","text":"↩ LOOP BACK\n\nReturn to Core Action\n*(retry or escalate)*","x":-300,"y":200,"width":200,"height":100,"color":"2"},
+		{"id":"notes","type":"text","text":"## DESIGN NOTES\n\n- Key tension point:\n- Core emotion:\n- Pacing:\n- Open question:","x":-600,"y":250,"width":200,"height":150,"color":"0"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"start","fromSide":"right","toNode":"core-action","toSide":"left"},
+		{"id":"e2","fromNode":"core-action","fromSide":"right","toNode":"feedback","toSide":"left"},
+		{"id":"e3","fromNode":"feedback","fromSide":"right","toNode":"reward","toSide":"left"},
+		{"id":"e4","fromNode":"feedback","fromSide":"bottom","toNode":"decision","toSide":"top"},
+		{"id":"e5","fromNode":"decision","fromSide":"right","toNode":"win","toSide":"left"},
+		{"id":"e6","fromNode":"decision","fromSide":"left","toNode":"loop-back","toSide":"right"},
+		{"id":"e7","fromNode":"loop-back","fromSide":"top","toNode":"core-action","toSide":"bottom"},
+		{"id":"e8","fromNode":"core-action","fromSide":"top","toNode":"fail","toSide":"left","label":"error/miss"}
+	]
+}

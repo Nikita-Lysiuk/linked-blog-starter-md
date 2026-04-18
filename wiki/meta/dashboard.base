@@ -1,0 +1,71 @@
+{
+  "filters": [],
+  "views": [
+    {
+      "id": "feature-readiness",
+      "name": "Feature Readiness",
+      "type": "table",
+      "filter": {
+        "field": "tags",
+        "operator": "contains",
+        "value": "mechanic"
+      },
+      "columns": [
+        { "id": "title",   "field": "title",   "label": "Mechanic",    "type": "text" },
+        { "id": "status",  "field": "status",  "label": "Status",      "type": "text" },
+        { "id": "updated", "field": "updated", "label": "Last Updated","type": "date" },
+        { "id": "tags",    "field": "tags",    "label": "Tags",        "type": "multitext" }
+      ],
+      "sort": [{ "field": "status", "direction": "asc" }]
+    },
+    {
+      "id": "technical-debt",
+      "name": "Technical Debt",
+      "type": "table",
+      "filter": {
+        "operator": "or",
+        "conditions": [
+          { "field": "tags", "operator": "contains", "value": "fixme" },
+          { "field": "tags", "operator": "contains", "value": "refactor" }
+        ]
+      },
+      "columns": [
+        { "id": "title",   "field": "title",   "label": "Note",        "type": "text" },
+        { "id": "tags",    "field": "tags",    "label": "Debt Type",   "type": "multitext" },
+        { "id": "status",  "field": "status",  "label": "Status",      "type": "text" },
+        { "id": "updated", "field": "updated", "label": "Updated",     "type": "date" }
+      ],
+      "sort": [{ "field": "updated", "direction": "desc" }]
+    },
+    {
+      "id": "orphans",
+      "name": "Project Graph — Orphans",
+      "type": "table",
+      "filter": {
+        "field": "tags",
+        "operator": "contains",
+        "value": "orphan"
+      },
+      "columns": [
+        { "id": "title",  "field": "title",  "label": "Note",   "type": "text" },
+        { "id": "type",   "field": "type",   "label": "Type",   "type": "text" },
+        { "id": "status", "field": "status", "label": "Status", "type": "text" }
+      ]
+    },
+    {
+      "id": "all-mechanics",
+      "name": "All Mechanics by Status",
+      "type": "board",
+      "filter": {
+        "field": "tags",
+        "operator": "contains",
+        "value": "mechanic"
+      },
+      "groupBy": "status",
+      "columns": [
+        { "id": "title",   "field": "title",   "label": "Mechanic",  "type": "text" },
+        { "id": "updated", "field": "updated", "label": "Updated",   "type": "date" }
+      ]
+    }
+  ]
+}

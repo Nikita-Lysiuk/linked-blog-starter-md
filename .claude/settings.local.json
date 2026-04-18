@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"C:/Projects/Obsidian Vault/Git\" log --oneline -5)"
+    ]
+  }
+}

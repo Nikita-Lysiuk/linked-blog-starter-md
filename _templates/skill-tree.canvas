@@ -1,0 +1,116 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "type": "text",
+      "text": "## ROOT SKILL\n[Core Ability]\n\n*Always unlocked. The foundation.*",
+      "x": 0,
+      "y": 0,
+      "width": 220,
+      "height": 120,
+      "color": "5"
+    },
+    {
+      "id": "tier1-a",
+      "type": "text",
+      "text": "## TIER 1 — A\n[Skill Name]\n\nCost: \nEffect:",
+      "x": -400,
+      "y": 200,
+      "width": 200,
+      "height": 120,
+      "color": "1"
+    },
+    {
+      "id": "tier1-b",
+      "type": "text",
+      "text": "## TIER 1 — B\n[Skill Name]\n\nCost: \nEffect:",
+      "x": 0,
+      "y": 200,
+      "width": 200,
+      "height": 120,
+      "color": "1"
+    },
+    {
+      "id": "tier1-c",
+      "type": "text",
+      "text": "## TIER 1 — C\n[Skill Name]\n\nCost: \nEffect:",
+      "x": 400,
+      "y": 200,
+      "width": 200,
+      "height": 120,
+      "color": "1"
+    },
+    {
+      "id": "tier2-a1",
+      "type": "text",
+      "text": "## TIER 2\n[Skill Name]\n\nRequires: Tier 1-A\nCost: \nEffect:",
+      "x": -550,
+      "y": 420,
+      "width": 200,
+      "height": 130,
+      "color": "3"
+    },
+    {
+      "id": "tier2-a2",
+      "type": "text",
+      "text": "## TIER 2\n[Skill Name]\n\nRequires: Tier 1-A\nCost: \nEffect:",
+      "x": -250,
+      "y": 420,
+      "width": 200,
+      "height": 130,
+      "color": "3"
+    },
+    {
+      "id": "tier2-b1",
+      "type": "text",
+      "text": "## TIER 2\n[Skill Name]\n\nRequires: Tier 1-B\nCost: \nEffect:",
+      "x": 0,
+      "y": 420,
+      "width": 200,
+      "height": 130,
+      "color": "3"
+    },
+    {
+      "id": "tier2-c1",
+      "type": "text",
+      "text": "## TIER 2\n[Skill Name]\n\nRequires: Tier 1-C\nCost: \nEffect:",
+      "x": 400,
+      "y": 420,
+      "width": 200,
+      "height": 130,
+      "color": "3"
+    },
+    {
+      "id": "capstone",
+      "type": "text",
+      "text": "## CAPSTONE\n[Ultimate Ability]\n\nRequires: All Tier 2\nCost: \nEffect:\n\n*Rare unlock — high impact*",
+      "x": 0,
+      "y": 640,
+      "width": 220,
+      "height": 150,
+      "color": "6"
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "text": "## LEGEND\n🟢 Tier 1 — Base skills\n🟡 Tier 2 — Specializations\n🔴 Capstone — Ultimate\n\n**Balance Notes:**\n- No single path should dominate\n- Each branch targets a playstyle\n- Capstone requires cross-branch",
+      "x": 700,
+      "y": 0,
+      "width": 250,
+      "height": 200,
+      "color": "0"
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "root",    "fromSide": "bottom", "toNode": "tier1-a",  "toSide": "top" },
+    { "id": "e2", "fromNode": "root",    "fromSide": "bottom", "toNode": "tier1-b",  "toSide": "top" },
+    { "id": "e3", "fromNode": "root",    "fromSide": "bottom", "toNode": "tier1-c",  "toSide": "top" },
+    { "id": "e4", "fromNode": "tier1-a", "fromSide": "bottom", "toNode": "tier2-a1", "toSide": "top" },
+    { "id": "e5", "fromNode": "tier1-a", "fromSide": "bottom", "toNode": "tier2-a2", "toSide": "top" },
+    { "id": "e6", "fromNode": "tier1-b", "fromSide": "bottom", "toNode": "tier2-b1", "toSide": "top" },
+    { "id": "e7", "fromNode": "tier1-c", "fromSide": "bottom", "toNode": "tier2-c1", "toSide": "top" },
+    { "id": "e8", "fromNode": "tier2-a1","fromSide": "bottom", "toNode": "capstone",  "toSide": "top" },
+    { "id": "e9", "fromNode": "tier2-b1","fromSide": "bottom", "toNode": "capstone",  "toSide": "top" },
+    { "id": "e10","fromNode": "tier2-c1","fromSide": "bottom", "toNode": "capstone",  "toSide": "top" }
+  ]
+}

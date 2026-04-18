@@ -1,0 +1,24 @@
+# Obsidian workspace state (changes every session, noisy diffs)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Raw source documents — can be large, kept local
+.raw/
+
+# Git subdirectory (legacy repo — see migration notes in CLAUDE.md)
+Git/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+*.bak
+
+# Temporary / cache files
+*.tmp
+*.log
+
+# Node / tooling (if ever running local scripts)
+node_modules/
+.env

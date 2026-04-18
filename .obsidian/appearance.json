@@ -1,0 +1,8 @@
+{
+  "theme": "obsidian",
+  "cssTheme": "Minimal",
+  "baseFontSize": 18,
+  "enabledCssSnippets": [
+    "vault-colors"
+  ]
+}
