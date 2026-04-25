@@ -27,8 +27,7 @@ Two players share a split-screen nightmare. One steals faces. One rewrites memor
 ### Target Aesthetics (what players should *feel*)
 
 | Half | Primary | Secondary |
-|------|---------|-----------|
-| **Stealth** | Fear, vulnerability, tension | Relief when successful |
+|------|---------|-----------|\n| **Stealth** | Fear, vulnerability, tension | Relief when successful |
 | **Puzzle** | Curiosity, confusion → "aha" | Shared excitement |
 | **Both** | Cooperation, trust in your partner | |
 
@@ -76,9 +75,9 @@ P2 scouts patrol pattern from above
       → P1 steals face (guard freezes, rope appears)
         → P1 moves through guard territory
           → P2 uses Paste B to redirect a blocking patrol guard
-            → P1 reaches checkpoint / puzzle trigger
-              → [Puzzle section]
-                → Next stealth section
+            → P1 reaches puzzle zone
+              → [Puzzle]
+                → Next stealth zone
 ```
 
 **Panic recovery branch:**
@@ -96,40 +95,43 @@ Guard spots P1 (AlertLevel rising)
 | Condition | Result |
 |-----------|--------|
 | AlertLevel reaches 1.0 on any guard | Fail → restart from checkpoint |
-| Social alarm: guard investigates frozen colleague, confirms something wrong | Fail → restart |
-| P1 + P2 both reach exit | Level complete |
+| Social alarm: guard confirms frozen colleague → raises alarm in radius | All NPCs in radius start searching. **Not an instant fail.** Players must hide until search expires. If a searching NPC then reaches AlertLevel 1.0 by spotting a player — *that* is the fail. |
+| P1 + P2 both reach the level exit | **Level complete** |
 
 **Current implementation:** `APR_GameMode::TriggerFailure()` → `OpenLevel()` (checkpoint system deferred).
+
+> [!note] Why social alarm ≠ instant fail
+> The alarm is a **pressure escalation**, not a death sentence. Players who react — hide, use Paste A, let the search expire — survive. Only a guard actually spotting a player (AlertLevel 1.0) ends the run. This keeps the game tense without being unfair.
 
 ---
 
 ## Act Structure
 
 ### Act 1 — Tutorial (current focus)
-- Simple environment: guards on clear routes, low density
-- Each ability gets a dedicated "lightbulb moment":
-  - Section 1: FaceSteal teaches the rope mechanic and time pressure
-  - Section 2: Telepathy teaches Copy + Paste B (redirect a guard off P1's path)
-  - Section 3: Both abilities together to solve a combined stealth + puzzle section
-- No immunity mechanics yet (SuspicionLevel stays low throughout)
-- Fail = restart (no checkpoint save needed yet)
+
+One continuous level. No loading screens, no seams between sections. Players experience it as a **single connected space** divided naturally by architecture into zones — not by code or menus.
+
+```
+[Start]
+  → Stealth Zone A   (learn FaceSteal + rope)
+  → Puzzle Zone A    (calm, curious)
+  → Stealth Zone B   (learn Telepathy Copy + Paste B)
+  → Puzzle Zone B    (combined: use ability to solve puzzle)
+  → Stealth Zone C   (both abilities together, higher density)
+  → [Level Exit]     → Level complete
+```
+
+- Each stealth zone gives P2 a clear elevated vantage (balcony, rooftop, walkway)
+- Each puzzle zone is spatially separated from guards — calm breathing room
+- No immunity mechanics (SuspicionLevel stays low throughout Act 1)
+- Checkpoints are spatial: restart puts players at the start of the current zone
 
 ### Act 2–3 (future)
 - Immunity introduced: high SuspicionLevel makes guards resist abilities
-- Officer detection: Officers check `Player.P1.Disguised` tag at high suspicion
-- Timed puzzles alongside AI to combine both halves
-- Checkpoint system active
-- Option B on rope break (AlertLevel 0.5 instead of 0) appears on immune guards
-
----
-
-## Level Structure (Act 1 template)
-
-```
-[Start] → Stealth A → [Checkpoint B] → Puzzle B → Stealth C → [Exit]
-```
-
-Each stealth section has a clear **spatial advantage** for P2: a balcony, rooftop edge, or walkway that lets them see below. P1 is always exposed on the ground.
+- Officer detection: Officers check `Player.P1.Disguised` at high suspicion
+- Timed puzzles alongside AI to merge both halves
+- Checkpoint system fully active
+- Option B on rope break (AlertLevel 0.5 not 0) appears on immune guards
 
 ---
 
@@ -137,10 +139,10 @@ Each stealth section has a clear **spatial advantage** for P2: a balcony, roofto
 
 - [ ] FaceSteal ability (P1) — [[PR-87]]
 - [ ] Telepathy ability (P2) — [[PR-89]], [[PR-90]], [[PR-91]]
-- [ ] Alert UI (visible indicator per guard)
+- [ ] Alert UI (visible indicator per guard — even a placeholder)
 - [ ] Rope UI (P1's FaceSteal tether)
 - [ ] At least one puzzle mechanic
-- [ ] A win condition trigger in the level
+- [ ] Win condition trigger placed in level
 
 ---
 

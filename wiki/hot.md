@@ -1,56 +1,54 @@
 ---
-type: meta
-title: Hot Cache
-updated: '2026-04-18T00:00:00.000Z'
+type: hot-cache
+title: Current Sprint Context
+updated: '2026-04-25'
 tags:
-  - meta
-  - hot-cache
+  - hot
+  - sprint
 ---
 
-# Recent Context
+# Hot Cache — Ability Sprint
 
-## Last Updated
-2026-04-18. Full wiki sync against actual codebase. All fictional content corrected.
+## Current Sprint: Ability Sprint (Sprint 4)
 
-## Current Sprint
-**Project Persival** — AI Sprint.
+**Goal:** Connect P1 and P2 abilities to the AI system that was built in AI Sprint. Make the stealth loop actually playable.
 
-**Active tasks:**
-- P1 FaceSteal: infrastructure complete (tags, Frozen state, IPR_AIAbilityTarget). **Next: write the player-facing activation component** that calls `AddGameplayTag` on P1 and `SetConsciousnessState(Frozen)` on target.
-- P2 MindCopy: BT/BB/MemoryComponent fully implemented. **Next: write the player-facing Copy/Paste component.**
-- Both abilities need a snapshot HUD indicator.
+## Priority Order
+```
+PR-88 → PR-92 → PR-87 → PR-89 → PR-90 → PR-91 → PR-94 → PR-93
+```
 
-**Learning Campus** — [[Collisions]] theory page complete. Collision Sandbox project staged.
+## Do Next
+**PR-88 — Wire `IPR_AIAbilityTarget` on `APR_BaseAI`**
+- This unblocks everything else
+- See [[AbilitySprint_Implementation]] for full requirements
 
-## Active Technical Roadblocks
+## What Was Just Finished (AI Sprint)
+- Full patrol system (all 4 modes, shared paths)
+- Two-layer alert system (0→0.5 investigate, 0.5→1.0 failure)
+- Consciousness states: Frozen, Overwritten, Replaced
+- `ApplyPasteA()` / `ApplyPasteB()` on `APR_AIController`
+- Colleague awareness (`BTService_PR_CheckColleagues`)
+- Stealth light system (`APR_LightZone` + `UPR_StealthComponent`)
+- GameplayTag set in `DefaultGameplayTags.ini`
+- BT editor: services on root, Abnormal Consciousness branch, NoticeReaction
 
-1. **FaceSteal — Player activation component missing.** `StealAppearance()` noted as planned in `PR_AIAbilityTarget.h:25–27` but not yet promoted to interface. P1 ability component hasn't been written.
+## Key Design Decisions Locked In
+- Rope break → NPC Option A: AlertLevel stays 0, 1–2 sec disorientation (Act 1)
+- Rope break on immune NPC → AlertLevel 0.5 (Act 2-3)
+- FaceSteal re-use on same NPC: allowed (levels designed around it)
+- Replaced state runs normal BT with donor's BB data (not a blocked state)
+- Two game halves: stealth (fear/tension) + puzzle (curiosity/aha)
+- Full design: [[GDD_Nocturne]]
 
-2. **P1+P2 interaction — Paste A on Frozen NPC.** If P2 Paste A restores `Normal` on a Frozen NPC, P1's disguise breaks silently. Edge case unresolved — needs cooperative design pass.
-
-3. **MindCopy — Paste B on already-Replaced NPC.** State interaction with P1 simultaneous target undefined. Needs ADR.
-
-## Key Architecture Facts (verified against code)
-- AI perception uses **GameplayTags** for identity — not mesh or class type (`APR_BaseAI::RuntimeTags`, replicated, `PR_BaseAI.h:196`)
-- P1 disguise = **tag injection + Frozen state** — no mesh swap, no `UDisguiseComponent`
-- P2 MindCopy = **Blackboard snapshot** via `UPR_AIMemoryComponent` — server-only, not replicated
-- Ability interface: **`IPR_AIAbilityTarget`** — 3 methods: `CanBeTargetedByAbility`, `GetMemoryComponent`, `GetCurrentConsciousnessState`
-- No GAS, no `IAbilitySystem`, no `UAbilityManagerComponent` — those were discarded proposals
-- Consciousness states: `Normal` / `Frozen` (P1) / `Overwritten` (P2 transition) / `Replaced` (P2 Paste B)
-
-## Recent Changes (this session)
-- **CORRECTED:** [[Disguise Steal]] — complete rewrite. Old version described mesh swap + `UDisguiseComponent` + `IAbilitySystem` (fictional). Now reflects actual tag-injection + Frozen state implementation.
-- **CORRECTED:** [[Ability System Interface]] — rewritten to describe `IPR_AIAbilityTarget`, not `IAbilitySystem`.
-- **CORRECTED:** [[Universal Ability System Interface]] — rewritten as ADR explaining why BT-driven state was chosen over the discarded custom ability manager proposal.
-- **CREATED:** [[Mind Copy]] — full P2 ability mechanic page (Copy, Paste A, Paste B flows)
-- **CREATED:** [[AI System Architecture]] — complete system map with class hierarchy, ability flows, design principles
-- **CREATED:** [[Consciousness State Machine]] — state transition diagram and detail for all 4 states
-- **CREATED:** [[IPR_AIAbilityTarget]], [[APR_BaseAI]], [[UPR_AIMemoryComponent]], [[APR_AIController]], [[UPR_EnemyConfig]], [[APR_BasePlayer]] entity pages
-- **UPDATED:** `wiki/entities/_index.md`, `wiki/game-design/technical-architecture/_index.md`
-
-## Active Threads
-- Next: write P1 FaceSteal activation component
-- Next: write P2 MindCopy activation component
-- Next: define P1+P2 simultaneous-target interaction (ADR)
-- Open: flesh out `wiki/game-design/loop-logic/` — core stealth loop not yet defined
-- Open: Collision Sandbox Stage 1 (math setup)
+## Jira Tickets
+| Key | Summary | Status |
+|-----|---------|--------|
+| PR-88 | Wire IPR_AIAbilityTarget | To Do |
+| PR-87 | UFaceStealComponent (P1) | To Do |
+| PR-89 | P2 Telepathy — Copy | To Do |
+| PR-90 | P2 Telepathy — Paste A | To Do |
+| PR-91 | P2 Telepathy — Paste B | To Do |
+| PR-92 | Apply AI.State.* tags | To Do |
+| PR-93 | AI perception tuning | To Do |
+| PR-94 | Place LightZone volumes | To Do |
