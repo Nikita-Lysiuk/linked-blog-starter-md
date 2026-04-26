@@ -1,20 +1,21 @@
 ---
 type: class
 title: UPR_EnemyConfig
-created: '2026-04-18T00:00:00.000Z'
-updated: '2026-04-18T00:00:00.000Z'
+created: '2026-04-18'
+updated: '2026-04-27'
 tags:
   - class
   - data-asset
   - ai
   - cpp
   - persival
+status: implemented
 module: AI
 header: Source/Nocturne/Public/AI/PR_EnemyConfig.h
 related:
   - '[[APR_BaseAI]]'
   - '[[APR_AIController]]'
-  - '[[Disguise Steal]]'
+  - '[[FaceSteal]]'
   - '[[AI System Architecture]]'
 ---
 
@@ -35,8 +36,8 @@ The single source of truth for every enemy's parameters. Nothing gameplay-releva
 ### Identity
 | Property | Purpose |
 |----------|---------|
-| `DefaultTags` | `FGameplayTagContainer` — faction + type tags copied to `APR_BaseAI::RuntimeTags` at `BeginPlay` |
-| `bCanBeTargetedByAbility` | `false` on mechanical enemies — makes them immune to P1 FaceSteal and P2 MindCopy |
+| `DefaultTags` | `FGameplayTagContainer` — type tags (e.g. `AI.Type.Guard`) copied to `APR_BaseCharacter::RuntimeTags` at `BeginPlay` via `InitializeRuntimeTags()` |
+| `bCanBeTargetedByAbility` | `false` on mechanical enemies — immune to P1 FaceSteal and P2 MindCopy |
 
 ### Movement
 | Property | Notes |
@@ -52,14 +53,15 @@ The single source of truth for every enemy's parameters. Nothing gameplay-releva
 | `AlertDecay` rate | How fast `AlertLevel` falls when no stimuli |
 
 ### Suspicion / Ability
-| Property | Line | Notes |
-|----------|------|-------|
-| `InvestigateWaitTime` | — | Seconds NPC waits at `LastKnownLocation` |
-| `SearchRadius` | — | Random search area radius |
-| `SearchDuration` | — | Max seconds spent searching |
-| `DisorientDuration` | — | Freeze time at start of P2 Paste A/B |
-| `MindReplaceDuration` | — | How long Paste B replacement lasts |
-| `FaceStealRange` | 193–196 | Max distance P1 can maintain stolen appearance (cm) |
+| Property | Notes |
+|----------|-------|
+| `InvestigateWaitTime` | Seconds NPC waits at `LastKnownLocation` |
+| `SearchRadius` | Random search area radius |
+| `SearchDuration` | Max seconds spent searching |
+| `DisorientDuration` | Duration of `BTTask_PR_Disorient` wake-up window after any ability deactivation |
+| `MindReplaceDuration` | How long Paste B replacement lasts |
+| `FaceStealRange` | Still present in config — may be repurposed for level-design annotations. **Not used for ability range check** — `UPR_FaceStealComponent::StealRadius` is the authoritative range for the ability. |
+| `SuspiciousColleagueTime` | How long a frozen NPC goes unnoticed by nearby colleagues |
 
 ### Timing / Dialog
 | Property | Notes |
@@ -73,11 +75,11 @@ The single source of truth for every enemy's parameters. Nothing gameplay-releva
 
 ```cpp
 // APR_BaseAI reads config at BeginPlay
-EnemyConfig->DefaultTags       // → InitializeRuntimeTags()
+EnemyConfig->DefaultTags              // → InitializeRuntimeTags()
 EnemyConfig->bCanBeTargetedByAbility  // → CanBeTargetedByAbility_Implementation()
-EnemyConfig->FaceStealRange    // → P1 range check
-EnemyConfig->DisorientDuration // → APR_AIController::ApplyPasteA/B
-EnemyConfig->MindReplaceDuration // → ApplyPasteB MindReplaceEndTime calc
+EnemyConfig->DisorientDuration        // → BTTask_PR_Disorient duration
+EnemyConfig->MindReplaceDuration      // → Paste B MindReplaceEndTime calc
+EnemyConfig->SuspiciousColleagueTime  // → BTService_PR_CheckColleagues threshold
 ```
 
 **Adding a new enemy archetype:**
@@ -93,6 +95,5 @@ EnemyConfig->MindReplaceDuration // → ApplyPasteB MindReplaceEndTime calc
 | Relationship | Target |
 |-------------|--------|
 | Owner | [[APR_BaseAI]] — reads at `BeginPlay` |
-| Exposes immunity flag | [[IPR_AIAbilityTarget]]`::CanBeTargetedByAbility()` |
-| FaceSteal config | [[Disguise Steal]] — `FaceStealRange` |
+| Immunity flag | [[IPR_AIAbilityTarget]]`::CanBeTargetedByAbility()` |
 | Paste timing | [[Mind Copy]] — `DisorientDuration`, `MindReplaceDuration` |

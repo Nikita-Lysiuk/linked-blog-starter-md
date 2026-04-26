@@ -2,15 +2,17 @@
 type: session
 title: Session — UFaceStealComponent Full Design
 date: '2026-04-27'
+updated: '2026-04-27'
 tags:
   - session
   - facesteal
   - sprint
   - abilities
   - design
+status: complete
 ---
 
-# Session — UFaceStealComponent Full Design (2026-04-27)
+# Session — UPR_FaceStealComponent Full Design (2026-04-27)
 
 > Resume point. Read this + [[hot]] before starting next session.
 
@@ -20,176 +22,124 @@ tags:
 
 | Item | Status |
 |------|--------|
-| RuntimeTags refactor to `APR_BaseCharacter` | ✅ Confirmed done (DOREPLIFETIME already in BaseCharacter) |
-| Tag system redesign | ✅ Decided — stripped to 2 categories |
-| `BTService_PR_UpdateAlertFromSight` tag caching | ✅ Decided — `static const` at file scope, struct removed |
-| `IPR_PlayerAbility` interface redesign | ✅ Written by developer, reviewed |
-| `IPR_AIAbilityTarget` SOLID audit | ✅ Decided — stays as query/access only, no ability-specific methods |
-| `UFaceStealComponent` full design | ✅ Locked |
+| RuntimeTags refactor to `APR_BaseCharacter` | ✅ Confirmed done |
+| Tag system redesign | ✅ 5 tags total |
+| `BTService_PR_UpdateAlertFromSight` tag caching pattern | ✅ Decided |
+| `IPR_PlayerAbility` interface redesign | ✅ Written + reviewed |
+| `IPR_AIAbilityTarget` SOLID audit | ✅ Stays as query/access only |
+| `UPR_FaceStealComponent` full design | ✅ Locked |
+| `UPR_FaceStealComponent` header written | ✅ All 4 fixes applied |
+| Wiki lint + stale page updates | ✅ Done |
+
+---
+
+## Header Fixes Applied
+
+| Fix | Before | After |
+|-----|--------|-------|
+| Class naming | `UFaceStealComponent` | `UPR_FaceStealComponent` |
+| Enum declaration | `enum EFaceStealState` | `enum class EFaceStealState : uint8` |
+| UENUM specifier | `UENUM(BlueprintType, Category="Face Steal")` | `UENUM(BlueprintType)` |
+| ClassGroup | `ClassGroup=(Custom)` | `ClassGroup=(Nocturne)` |
+
+**File:** `Public/Mechanics/Abilities/PR_FaceStealComponent.h`
 
 ---
 
 ## Key Decisions Made This Session
 
 ### 1. Tag system stripped to 2 categories
-Old system had ~16 tags. Everything driven by BB or component state doesn't need a tag.
-
-**Keep:**
 - `Ability.FaceSteal.Active` — on P1 while steal is active. BT service reads this to suppress AlertLevel delta.
-- `AI.Type.Guard`, `AI.Type.Officer`, `AI.Type.Civilian`, `AI.Type.Mech` — NPC identity. Future: Officer secondary validation branch.
+- `AI.Type.Guard/Officer/Civilian/Mech` — NPC identity. Future: Officer secondary validation.
+- Everything else deleted: `AI.Faction.*`, `AI.State.*`, `Player.*`, extra ability tags.
 
-**Delete everything else:** `AI.Faction.*`, `AI.State.*` (BB handles state), `Player.*`, `Ability.FaceSteal.Cooldown`, `Ability.Telepathy.*` (add back when building Telepathy).
-
-**Why:** BB handles state, component state handles ability tracking. Tags are only for cross-system identity queries — not internal bookkeeping.
-
-### 2. `BTService_PR_UpdateAlertFromSight` — tag caching pattern
-`FAlertFromSightMemory` struct **removed**. Node memory is for per-AI mutable state, not constants.
-
-Correct pattern — in `.cpp` at file scope:
+### 2. `BTService_PR_UpdateAlertFromSight` — tag caching
+`FAlertFromSightMemory` struct removed. Correct pattern — in `.cpp` at file scope:
 ```cpp
 static const FGameplayTag FaceStealActiveTag =
     FGameplayTag::RequestGameplayTag(FName("Ability.FaceSteal.Active"));
 ```
-`TickNode` reads it directly. Zero per-AI cost.
-
-Tag check in `TickNode`: if perceived actor has `FaceSteal.Active` tag → skip AlertLevel delta entirely.
+Check in `TickNode`: if perceived actor has this tag → skip AlertLevel delta.
 
 ### 3. `IPR_AIAbilityTarget` — query/access interface only
-**No `StealAppearance()`.** Adding ability-specific methods to this interface violates OCP — every new ability would require modifying it.
+No `StealAppearance()`. Adding ability-specific methods violates OCP. Component orchestrates directly:
+1. `CanBeTargetedByAbility()` → gate
+2. `GetMemoryComponent()` → `SetConsciousnessState(Frozen)` directly
+3. Cast to `APR_BaseCharacter` → `GetRuntimeTags()` → copy to P1
+4. Cast to `ACharacter` → `GetMesh()` → store + swap
 
-Interface responsibility: tell abilities **whether** they can target an AI, and **give access** to AI components. The ability component orchestrates everything itself via `GetMemoryComponent()` + casts.
+### 4. `IPR_PlayerAbility` — final interface
+| Method | Trigger |
+|--------|---------|
+| `StartTargeting()` | E pressed |
+| `StopTargeting()` | E pressed again |
+| `CanActivate() const` | Cooldown + state check (no param) |
+| `Activate()` | LMB — uses cached `PendingTarget` (no param) |
+| `Deactivate()` | Grace timer / manual |
+| `IsActive() const` | Query |
+| `IsTargeting() const` | Query |
 
-`FaceStealComponent::Activate()` flow (no interface method needed):
-1. Cast `PendingTarget` to `IPR_AIAbilityTarget`
-2. `CanBeTargetedByAbility()` → false? immunity snap, done
-3. `GetMemoryComponent()` → `SetConsciousnessState(Frozen)` directly
-4. Cast to `APR_BaseCharacter` → `GetRuntimeTags()` → copy to P1
-5. Cast to `ACharacter` → `GetMesh()` → store + apply NPC mesh to P1
+### 5. `StealRadius` on component, not EnemyConfig
+Predictability: consistent range the player can learn. `UPR_FaceStealComponent::StealRadius = 1500cm`.
 
-Remove the future method comments (`StealAppearance`, `PasteConsciousness`) from the interface header — they represent the old (wrong) design.
+### 6. `UPR_FaceStealComponent` full design
 
-### 4. `IPR_PlayerAbility` interface — final shape
-Developer updated the interface. Final method set:
+**Class:** `UActorComponent`, implements `IPR_PlayerAbility`
 
-| Method | Trigger | Purpose |
-|--------|---------|---------|
-| `StartTargeting()` | E pressed | Enter targeting mode, enable trace tick, fire `BP_OnTargetingStarted` |
-| `StopTargeting()` | E pressed again | Clear `PendingTarget`, exit targeting, fire `BP_OnTargetingCancelled` |
-| `CanActivate() const` | checked before Activate | Cooldown check + not already active. No param — target validity checked inside component during trace tick |
-| `Activate()` | LMB pressed | Uses cached `PendingTarget`. No param. |
-| `Deactivate()` | Grace timer / manual | Restore state |
-| `IsActive() const` | query | |
-| `IsTargeting() const` | query | |
+**EFaceStealState:** `Inactive`, `Targeting`, `Active`, `GraceTimer`
 
-**Why no AActor* param on Activate:** `PendingTarget` is cached internally during targeting mode. Passing nullptr was a design smell — the signature was lying.
-
-**Why no param on CanActivate:** checks ability-level conditions (cooldown), not target validity. Target validity is checked inside the component's trace tick via `CanBeTargetedByAbility()`.
-
-### 5. FaceStealRange — single value on component
-Range lives on `UFaceStealComponent` (`StealRadius`, `EditDefaultsOnly`), not per-NPC in `EnemyConfig`.
-
-**Why:** Predictability. If each NPC had a different range, players couldn't learn the system — it would feel random and frustrating. Consistent range = learnable.
-
-### 6. `UFaceStealComponent` — full design locked
-
-**Class:** `UActorComponent` (no transform needed — trace from camera, distance check via owner location)
-
-**Internal state enum (UENUM above class):**
-```
-EFaceStealState: Inactive, Targeting, Active, GraceTimer
-```
-
-**Designer properties (EditDefaultsOnly, private + AllowPrivateAccess):**
-
-| Variable | Type | Default |
-|----------|------|---------|
-| `TraceDistance` | `float` (cm) | `2000.f` |
-| `StealRadius` | `float` (cm) | `1500.f` |
-| `GraceTimerDuration` | `float` (s) | `3.f` |
-| `CooldownDuration` | `float` (s) | `5.f` |
+**Designer properties (EditDefaultsOnly):**
+- `TraceDistance` = 2000cm
+- `StealRadius` = 1500cm
+- `GraceTimerDuration` = 3s
+- `CooldownDuration` = 15s
 
 **Private runtime state:**
+- `PendingTarget`: `TWeakObjectPtr<AActor>`
+- `StealTarget`: `TWeakObjectPtr<AActor>`
+- `OriginalMesh`: `TObjectPtr<USkeletalMesh>`
+- `CurrentState`: `EFaceStealState`
+- `GraceTimerHandle`, `CooldownTimerHandle`: `FTimerHandle`
+- `bOnCooldown`: `bool`
 
-| Variable | Type |
-|----------|------|
-| `PendingTarget` | `TWeakObjectPtr<AActor>` |
-| `StealTarget` | `TWeakObjectPtr<AActor>` |
-| `OriginalMesh` | `TObjectPtr<USkeletalMesh>` |
-| `CurrentState` | `EFaceStealState` |
-| `GraceTimerHandle` | `FTimerHandle` |
-| `CooldownTimerHandle` | `FTimerHandle` |
-| `bOnCooldown` | `bool` |
+**BlueprintImplementableEvents:**
+`BP_OnTargetingStarted`, `BP_OnTargetingCancelled`, `BP_OnTargetFound(AActor*)`, `BP_OnTargetLost`, `BP_OnFaceStealActivated(AActor*)`, `BP_OnRopeWarning(float, float)`, `BP_OnEnterRadius`, `BP_OnFaceStealDeactivated`
 
-**IPR_PlayerAbility overrides:**
-
-| Method | Body |
-|--------|------|
-| `CanActivate_Implementation()` | `return !bOnCooldown && CurrentState == Inactive` |
-| `StartTargeting_Implementation()` | State → Targeting, fire `BP_OnTargetingStarted` |
-| `StopTargeting_Implementation()` | Clear PendingTarget, state → Inactive, fire `BP_OnTargetingCancelled` |
-| `Activate_Implementation()` | Validate PendingTarget → freeze NPC → copy tags + mesh → state → Active → fire `BP_OnFaceStealActivated` |
-| `Deactivate_Implementation()` | Restore mesh + tags → `BeginDisorientation` on NPC → start cooldown → state → Inactive → fire `BP_OnFaceStealDeactivated` |
-| `IsActive_Implementation()` | `return CurrentState == Active \|\| CurrentState == GraceTimer` |
-| `IsTargeting_Implementation()` | `return CurrentState == Targeting` |
-
-**Private helpers:**
-
-| Method | Body |
-|--------|------|
-| `TickComponent` | Targeting: line trace, update PendingTarget, fire BP_OnTargetFound/Lost. Active/GraceTimer: check distance vs StealRadius, manage grace timer |
-| `OnGraceTimerExpired()` | `Deactivate_Implementation()` |
-| `OnCooldownExpired()` | `bOnCooldown = false` |
-
-Timer callbacks need `UFUNCTION()` (empty specifier) so UE's timer system can find them via reflection.
-
-**BlueprintImplementableEvents (no C++ body, BP wires all assets):**
-
-| Event | When | BP responsibility |
-|-------|------|-------------------|
-| `BP_OnTargetingStarted()` | StartTargeting | Dark smoke VFX on hands, UMG vignette overlay, sound |
-| `BP_OnTargetingCancelled()` | StopTargeting | Remove VFX, hide UI |
-| `BP_OnTargetFound(AActor*)` | Trace hits valid NPC | White outline on NPC |
-| `BP_OnTargetLost()` | Trace loses NPC | Remove outline |
-| `BP_OnFaceStealActivated(AActor*)` | Activate succeeds | Soul-smoke beam NPC→P1, sound, anim montage |
-| `BP_OnRopeWarning(float TimeRemaining, float MaxTime)` | Each tick outside radius | Drive rope colour/pulse |
-| `BP_OnEnterRadius()` | P1 re-enters radius | Cancel pulse, rope normal |
-| `BP_OnFaceStealDeactivated()` | Deactivate | Snap rope VFX, restore UI, break sound |
-
-**No delegates.** BP events are sufficient. No external C++ system subscribes to FaceSteal state yet.
-
-**Animations:** Montages triggered from BP event handlers. Not anim state machine — ability reactions are one-shot events, not continuous locomotion states.
+No Niagara/sound/UMG pointers in C++. No delegates. Montages (not state machine) for animations.
 
 ---
 
-## Bugs Found — Fix Before Writing Component
+## `Activate_Implementation()` Flow
+1. `PendingTarget.IsValid()` — bail if invalid
+2. Cast to `IPR_AIAbilityTarget` → `CanBeTargetedByAbility()` → false? immunity snap + bail
+3. `GetMemoryComponent()` → `SetConsciousnessState(Frozen)`
+4. Cast to `APR_BaseCharacter` → copy `RuntimeTags` to P1
+5. Cast to `ACharacter` → store mesh asset as `OriginalMesh`, apply NPC mesh to P1
+6. `AddGameplayTag(FaceStealActiveTag)` on P1
+7. `StealTarget = PendingTarget`, `CurrentState = Active`
+8. `BP_OnFaceStealActivated(Target)`
 
-| File | Issue |
-|------|-------|
-| `PR_PlayerAbility.h` line 31 | `IsTargeting()` returns `void` — must return `bool` |
-| `PR_AIAbilityTarget.h` line 62 | Typo `BLueprintNativeEvent` (capital L) — fix to `BlueprintNativeEvent` |
+## `Deactivate_Implementation()` Flow
+1. Restore `OriginalMesh` on P1's mesh component
+2. Remove stolen `RuntimeTags` from P1
+3. `RemoveGameplayTag(FaceStealActiveTag)` from P1
+4. Cast `StealTarget` to `IPR_AIAbilityTarget` → `BeginDisorientation()`
+5. Clear `StealTarget`, `CurrentState = Inactive`
+6. Start `CooldownTimerHandle`
+7. `BP_OnFaceStealDeactivated()`
 
 ---
 
-## Exact Next Steps (do in this order)
+## Exact Next Steps
 
-1. **Fix `IsTargeting()` return type** in `PR_PlayerAbility.h` (void → bool)
-2. **Fix `BLueprintNativeEvent` typo** in `PR_AIAbilityTarget.h` line 62
-3. **Remove future method comments** (`StealAppearance`, `PasteConsciousness`) from `PR_AIAbilityTarget.h`
-4. **Clean up `DefaultGameplayTags.ini`** — delete all except `Ability.FaceSteal.Active` + `AI.Type.*` block
-5. **Write `UFaceStealComponent` header** — `EFaceStealState` enum + class declaration per requirements above
-6. **Implement `UFaceStealComponent.cpp`** — method bodies per table above
-
----
-
-## What's Still Open
-
-- `BTService_PR_UpdateAlertFromSight` .cpp needs the `static const` tag + `HasGameplayTag` check added — not yet implemented
-- `IPR_AIAbilityTarget` future method comments still need removal from header
-- PR-92 ("Apply AI.State.* tags") is effectively cancelled — `AI.State.*` tags deleted, BB handles state. Can be closed.
+1. **Implement `UPR_FaceStealComponent.cpp`**
+2. **Add tag check to `BTService_PR_UpdateAlertFromSight.cpp`**
+3. **Remove stale comments** from `PR_AIAbilityTarget.h` (`StealAppearance`, `PasteConsciousness`)
 
 ---
 
 ## Related
-- [[AbilitySprint_Implementation]] — implementation plan (needs PR-92 cancellation noted)
-- [[FaceSteal]] — mechanic spec
+- [[AbilitySprint_Implementation]] — implementation plan
+- [[FaceSteal]] — mechanic spec (updated this session)
 - [[hot]] — current sprint state
+- [[meta/lint-report-2026-04-27]] — wiki health check

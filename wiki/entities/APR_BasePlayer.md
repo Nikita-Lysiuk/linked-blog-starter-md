@@ -1,18 +1,19 @@
 ---
 type: class
 title: APR_BasePlayer
-created: '2026-04-18T00:00:00.000Z'
-updated: '2026-04-18T00:00:00.000Z'
+created: '2026-04-18'
+updated: '2026-04-27'
 tags:
   - class
   - player
   - cpp
   - persival
+status: implemented
 module: Core
 header: Source/Nocturne/Public/Core/PR_BasePlayer.h
 related:
   - '[[AI System Architecture]]'
-  - '[[Disguise Steal]]'
+  - '[[FaceSteal]]'
   - '[[Mind Copy]]'
 ---
 
@@ -22,7 +23,7 @@ related:
 **Module:** Core
 **Inheritance:** `APR_BaseCharacter` → `ATurnInPlaceCharacter` (plugin) | implements `IPR_InputProvider`
 
-Abstract base for both player characters (P1 Face-Stealer, P2 Telepath). Owns Enhanced Input wiring, sprint, grapple movement, and the stealth light-zone tracker. Concrete player abilities live in Blueprint subclasses.
+Abstract base for both player characters (P1 Face-Stealer, P2 Telepath). Owns Enhanced Input wiring, sprint, grapple movement, and the stealth light-zone tracker. Each player's ability is a C++ component (`UPR_FaceStealComponent` / `UPR_TelepathyComponent`) assigned to `AbilityComponent` in their Blueprint subclass.
 
 ---
 
@@ -49,10 +50,11 @@ class APR_BasePlayer : public APR_BaseCharacter, public IPR_InputProvider
 | `LookSensitivityX/Y` | 49–53 | float — per-player sensitivity |
 
 ### Components
-| Property | Line | Notes |
-|----------|------|-------|
-| `GrappleMovementComponent` | 93 | `UPR_GrappleMovementComponent*` — P2 vertical traversal |
-| `StealthComponent` | 97 | `UPR_StealthComponent*` — light zone overlap tracker |
+| Property | Type | Line | Notes |
+|----------|------|------|-------|
+| `GrappleMovementComponent` | `UPR_GrappleMovementComponent*` | 93 | P2 vertical traversal |
+| `StealthComponent` | `UPR_StealthComponent*` | 97 | Light zone overlap tracker |
+| `AbilityComponent` | `TScriptInterface<IPR_PlayerAbility>` | ~100 | `EditDefaultsOnly` — set to `UPR_FaceStealComponent` in `BP_P1`, `UPR_TelepathyComponent` in `BP_P2` |
 
 ---
 
@@ -68,22 +70,26 @@ class APR_BasePlayer : public APR_BaseCharacter, public IPR_InputProvider
 
 ---
 
+## Ability System
+
+`AbilityComponent` (`TScriptInterface<IPR_PlayerAbility>`) is the single ability slot per player. Each ability is a `UActorComponent` implementing `IPR_PlayerAbility`:
+
+- `BP_P1_FaceStealer` assigns `UPR_FaceStealComponent` (PR-87 — in progress)
+- `BP_P2_Telepath` assigns `UPR_TelepathyComponent` (PR-89/90/91 — pending)
+
+Input bindings in `APR_BasePlayer` call `AbilityComponent->StartTargeting()`, `Activate()`, `Deactivate()` — the base player knows nothing about which specific ability is assigned.
+
+`RuntimeTags` (for P1's stolen identity tags) is inherited from `APR_BaseCharacter`.
+
+---
+
 ## Stealth Component
 
-`UPR_StealthComponent` tracks overlapping `APR_LightZone` volumes and exposes an **aggregate light multiplier** used by AI perception to scale sight detection. Darker zones reduce the effective sight radius on the per-NPC level.
+`UPR_StealthComponent` tracks overlapping `APR_LightZone` volumes and exposes an aggregate light multiplier used by `BTService_PR_UpdateAlertFromSight` to scale sight detection speed.
 
 ---
 
-## Grapple Hook (P2)
-
-`UPR_GrappleHookComponent` provides cone-based anchor targeting:
-- Radius: **1500 cm**
-- Dot threshold: **0.4** (±66° cone)
-- Critical for P2's vertical traversal between floors
-
----
-
-## Movement Speeds (`UPR_CharacterMovement`)
+## Movement Speeds
 
 | Mode | Speed |
 |------|-------|
@@ -91,18 +97,18 @@ class APR_BasePlayer : public APR_BaseCharacter, public IPR_InputProvider
 | Crouch | 300 cm/s |
 | Sprint | 1200 cm/s |
 
-Sprint is loud and highly visible — increases AI perception significantly.
+Sprint increases AI perception significantly.
 
 ---
 
 ## Inheritance Chain
 
 ```
-ATurnInPlaceCharacter (Plugin: TurnInPlace-release/)
-  └── APR_BaseCharacter
-        └── APR_BasePlayer  (+IPR_InputProvider)
-              ├── BP_P1_FaceStealer  (Blueprint — FaceSteal ability)
-              └── BP_P2_Telepath     (Blueprint — MindCopy ability)
+ATurnInPlaceCharacter (Plugin)
+  └── APR_BaseCharacter  (RuntimeTags, tag CRUD)
+        └── APR_BasePlayer  (+IPR_InputProvider, +AbilityComponent)
+              ├── BP_P1_FaceStealer  (UPR_FaceStealComponent)
+              └── BP_P2_Telepath     (UPR_TelepathyComponent)
 ```
 
 ---
@@ -111,6 +117,6 @@ ATurnInPlaceCharacter (Plugin: TurnInPlace-release/)
 
 | Relationship | Target |
 |-------------|--------|
-| P1 ability | [[Disguise Steal]] — tags copied onto this actor's container |
-| P2 ability | [[Mind Copy]] — activates Copy/Paste via controller calls |
+| P1 ability | [[FaceSteal]] — `UPR_FaceStealComponent` on `AbilityComponent` |
+| P2 ability | [[Mind Copy]] — `UPR_TelepathyComponent` on `AbilityComponent` (pending) |
 | Architecture | [[AI System Architecture]] |

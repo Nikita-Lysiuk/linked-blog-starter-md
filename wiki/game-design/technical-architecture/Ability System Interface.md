@@ -1,8 +1,8 @@
 ---
 type: concept
 title: IPR_AIAbilityTarget — Ability System Interface
-created: '2026-04-18T00:00:00.000Z'
-updated: '2026-04-18T00:00:00.000Z'
+created: '2026-04-18'
+updated: '2026-04-27'
 tags:
   - technical-architecture
   - interface
@@ -16,7 +16,7 @@ related:
   - '[[IPR_AIAbilityTarget]]'
   - '[[APR_BaseAI]]'
   - '[[UPR_AIMemoryComponent]]'
-  - '[[Disguise Steal]]'
+  - '[[FaceSteal]]'
   - '[[Mind Copy]]'
   - '[[AI System Architecture]]'
   - '[[game-design/technical-architecture/_index]]'
@@ -26,17 +26,15 @@ related:
 
 **Project:** Persival
 **Language:** C++ (Unreal Engine 5.6)
-**Status:** Implemented — lives in `Source/Nocturne/Public/Interfaces/PR_AIAbilityTarget.h`
-
-> [!correction] Previous version of this note described a fictional `IAbilitySystem` interface with `ExecuteAbility`, `CancelAbility`, and `UAbilityManagerComponent`. **None of that exists in the codebase.** The real ability interface is `IPR_AIAbilityTarget` — documented here.
+**Status:** Implemented — `Source/Nocturne/Public/Interfaces/PR_AIAbilityTarget.h`
 
 ---
 
 ## Intent
 
-Define the **sole interaction boundary** between player abilities (P1 FaceSteal, P2 MindCopy) and AI characters. Ability code targets this interface exclusively — no concrete class casts, ever. This enforces the core design principle:
+Define the **query and access boundary** between player ability components and AI characters. Ability code uses this interface to ask two questions: *can I target this AI?* and *give me access to its internal components*. The ability component then orchestrates everything itself — the interface never knows what the ability does.
 
-> "P1 and P2 abilities interact with AI exclusively through `IPR_AIAbilityTarget` — never by casting to a concrete class." — CLAUDE.md
+This enforces the Open/Closed Principle: adding a new ability requires only a new component implementing `IPR_PlayerAbility`, not a change to `IPR_AIAbilityTarget`.
 
 ---
 
@@ -45,26 +43,26 @@ Define the **sole interaction boundary** between player abilities (P1 FaceSteal,
 ```cpp
 // Source/Nocturne/Public/Interfaces/PR_AIAbilityTarget.h
 
-UINTERFACE(MinimalAPI, Blueprintable)
-class UPR_AIAbilityTarget : public UInterface { GENERATED_BODY() };
-
 class IPR_AIAbilityTarget
 {
     GENERATED_BODY()
 public:
-    // Returns false for mechanical enemies (EnemyConfig->bCanBeTargetedByAbility == false)
-    UFUNCTION(BlueprintNativeEvent)
+    // Gate check — false for mechanical enemies (EnemyConfig->bCanBeTargetedByAbility)
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI|Abilities")
     bool CanBeTargetedByAbility() const;
 
-    // P2 entry point — gives access to TakeSnapshot / Paste API
-    UFUNCTION(BlueprintNativeEvent)
+    // Access — gives ability components the snapshot API without knowing NPC type
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI|Abilities")
     UPR_AIMemoryComponent* GetMemoryComponent() const;
 
-    // State query — consciousness state without casting to APR_BaseAI
-    UFUNCTION(BlueprintNativeEvent)
-    EAIConsciousnessState GetCurrentConsciousnessState() const;
+    // Trigger disorientation — called by any ability on deactivation/expiry
+    // BlueprintNativeEvent: BP plays animation, C++ sets bIsDisoriented BB key
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI|Abilities")
+    void BeginDisorientation();
 
-    // Planned (PR_AIAbilityTarget.h:25–27): StealAppearance() for P1 full activation
+    // State query shortcut — avoids component access for simple checks
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI|Abilities")
+    EAIConsciousnessState GetCurrentConsciousnessState() const;
 };
 ```
 
@@ -72,29 +70,37 @@ public:
 
 ## APR_BaseAI Implementation
 
-| Method | Line | Implementation |
-|--------|------|----------------|
-| `CanBeTargetedByAbility_Implementation()` | `PR_BaseAI.h:85` | `return EnemyConfig->bCanBeTargetedByAbility` |
-| `GetMemoryComponent_Implementation()` | `PR_BaseAI.h:90` | `return MemoryComponent` |
-| `GetCurrentConsciousnessState_Implementation()` | `PR_BaseAI.h:95` | Delegates to `MemoryComponent->GetConsciousnessState()` |
+| Method | Implementation |
+|--------|---------------|
+| `CanBeTargetedByAbility_Implementation()` | `return EnemyConfig->bCanBeTargetedByAbility` |
+| `GetMemoryComponent_Implementation()` | `return MemoryComponent` |
+| `BeginDisorientation_Implementation()` | Sets `bIsDisoriented = true` on Blackboard — `BTTask_PR_Disorient` handles the 2s wake-up window. BP override plays stagger animation. |
+| `GetCurrentConsciousnessState_Implementation()` | Delegates to `MemoryComponent->GetConsciousnessState()` |
 
 ---
 
 ## How Each Ability Uses the Interface
 
-### P1 FaceSteal (Disguise Steal)
+### P1 FaceSteal (`UPR_FaceStealComponent`)
 ```
-CanBeTargetedByAbility() → gate check
+CanBeTargetedByAbility()      → gate check (false = immunity snap)
 GetCurrentConsciousnessState() → verify not already Frozen/Replaced
-[Then calls APR_BaseAI methods directly to add tags + set Frozen]
-// StealAppearance() planned to unify this
+GetMemoryComponent()           → SetConsciousnessState(Frozen)
+Cast to APR_BaseCharacter      → GetRuntimeTags() → copy to P1
+Cast to ACharacter             → GetMesh() → store + swap
+[On deactivate]
+BeginDisorientation()          → triggers 2s wake-up, AlertLevel stays 0
 ```
 
-### P2 MindCopy
+The ability component orchestrates directly. The interface is a door opener — it never knows what FaceSteal does with what's behind the door.
+
+### P2 Telepathy (`UPR_TelepathyComponent` — pending PR-89/90/91)
 ```
-CanBeTargetedByAbility() → gate check
-GetMemoryComponent() → TakeSnapshot()         // Copy
-GetMemoryComponent() → (via Controller)       // Paste A/B via APR_AIController
+CanBeTargetedByAbility()  → gate check
+GetMemoryComponent()      → TakeSnapshot(BB)           // Copy
+GetMemoryComponent()      → (snapshot transfer)        // Paste A/B
+[On Paste expiry]
+BeginDisorientation()     → same wake-up path as P1
 ```
 
 ---
@@ -102,10 +108,10 @@ GetMemoryComponent() → (via Controller)       // Paste A/B via APR_AIControlle
 ## Design Notes
 
 > [!key-insight] Why Not GAS?
-> Unreal's Gameplay Ability System was considered and rejected for now. See [[AI System Architecture]] for the full ADR. Short answer: GAS footprint is too large for a 3-person team at prototype stage; this interface + BT-driven state achieves the same result with full control.
+> Unreal's Gameplay Ability System was considered and rejected for now. See [[AI System Architecture]] for the full ADR. Short answer: GAS footprint (ASC on every NPC, Attribute Sets, Gameplay Effects) is too large for a 3-person team at prototype stage.
 
-> [!gap] StealAppearance() planned
-> `PR_AIAbilityTarget.h:25–27` has comments marking `StealAppearance()` as a planned addition for P1's full activation path. Once P1's ability component is written, this method should be promoted to the interface contract.
+> [!key-insight] Why No Ability-Specific Methods?
+> Previous design considered adding `StealAppearance()` to this interface. Rejected — it couples the interface to one specific ability, violating OCP. Every new ability would require modifying the interface. The current design keeps the interface as pure query/access; each ability component decides what to do with the access it gets.
 
 ---
 
@@ -113,5 +119,5 @@ GetMemoryComponent() → (via Controller)       // Paste A/B via APR_AIControlle
 - [[IPR_AIAbilityTarget]] — entity page with full class listing
 - [[APR_BaseAI]] — sole current implementor
 - [[UPR_AIMemoryComponent]] — exposed via `GetMemoryComponent()`
-- [[Disguise Steal]], [[Mind Copy]] — ability pages using this interface
-- [[AI System Architecture]] — why this pattern was chosen over GAS / custom manager
+- [[FaceSteal]], [[Mind Copy]] — ability pages using this interface
+- [[AI System Architecture]] — why this pattern was chosen over GAS
