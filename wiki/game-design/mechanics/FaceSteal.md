@@ -31,14 +31,19 @@ FaceSteal is **borrowed time under a spatial constraint**. The player isn't powe
 - Target must have `CanBeTargetedByAbility = true` in their `UPR_EnemyConfig`
 - P1 presses ability input
 
-### On Activation
-1. P1's **SkeletalMesh** swaps to the target NPC's mesh (from their `UPR_EnemyConfig`)
+### Targeting Mode (button press — before LMB confirm)
+- Screen edges darken, centre stays bright
+- Glowing reticle VFX at screen centre
+- Line trace from camera centre begins (trace length = component param)
+- Player aims at desired NPC, then presses LMB to confirm
+
+### On Activation (LMB confirm on valid NPC)
+1. P1's **third-person SkeletalMesh** swaps to the target NPC's mesh (first-person hands unchanged — game is first-person)
 2. Target NPC's `RuntimeTags` are **copied** onto P1 (e.g. `AI.Type.Guard`, `AI.Faction.Security`)
 3. `Player.P1.Disguised` tag is applied to P1
-4. P1's **team ID** changes from 0 → 1 (perception system now treats P1 as an ally)
-5. Target NPC's `ConsciousnessState` → `Frozen`
-6. `AI.State.Frozen` tag applied to target NPC
-7. Rope UI appears between P1 and the frozen NPC (green)
+4. Target NPC's `ConsciousnessState` → `Frozen`
+5. `AI.State.Frozen` tag applied to target NPC
+6. Rope UI appears between P1 and the frozen NPC (green)
 
 ### While Active (tick every 0.5s)
 - Check distance from P1 to frozen NPC
@@ -52,8 +57,8 @@ FaceSteal is **borrowed time under a spatial constraint**. The player isn't powe
 1. P1's mesh reverts to original
 2. Stolen `RuntimeTags` removed from P1
 3. `Player.P1.Disguised` tag removed from P1
-4. P1's team ID reverts to 0
-5. Frozen NPC enters `Overwritten` state (`DisorientDuration` ~1–2 sec)
+4. `TriggerDisorientation()` called on NPC — sets `bIsDisoriented` BB key
+5. `BTTask_PR_Disorient` runs: NPC plays wake-up anim, waits `DisorientDuration` (~2 sec)
 6. During disorientation: NPC is unaware, **AlertLevel stays 0** — player's escape window
 7. After disorientation: NPC resumes normal patrol at AlertLevel 0 (no memory of being frozen)
 
@@ -83,13 +88,13 @@ When `SuspicionLevel >= NPC.SuspicionThreshold`:
 
 | What changes | When active | When dropped |
 |---|---|---|
-| P1 mesh | → NPC mesh | → restored |
-| P1 team ID | → 1 (AI faction) | → 0 (player) |
+| P1 third-person mesh | → NPC mesh | → restored |
+| P1 team ID | unchanged (stays 0) | unchanged |
 | P1 tags | + stolen AI.Type.* | - removed |
 | `Player.P1.Disguised` | applied | removed |
-| NPC state | Frozen | Overwritten → Normal |
+| NPC state | Frozen | Disoriented (2s) → Normal |
 
-**Result while disguised:** Regular guards skip P1 on sight (same team). Officers check `Player.P1.Disguised` — immune at high SuspicionLevel.
+**Result while disguised:** AI perception still fires on P1 (same team 0). Disguise works via **tag check** in `BTService_PR_UpdateAlertFromSight` — if P1 has matching faction tags, AlertLevel delta is suppressed. Officers do a deeper check on the specific tag (Act 2+).
 
 ---
 

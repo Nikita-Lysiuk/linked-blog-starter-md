@@ -21,10 +21,16 @@ sprint: Ability Sprint
 ## Priority Order
 
 ```
-PR-88 (interface) → PR-92 (tags) → PR-87 (FaceSteal) → PR-89 (Copy) → PR-90 (Paste A) → PR-91 (Paste B) → PR-94 (LightZones) → PR-93 (tuning)
+Cleanup → Refactor → PR-87 (FaceSteal full) → PR-89/90/91 (Telepathy full) → AI polish
 ```
 
-Everything blocks on PR-88. Do that first.
+### Pre-PR-87 Cleanup (do first, unblocks everything)
+1. Delete `Overwritten` from `EAIConsciousnessState`
+2. Delete `BTTask_PR_HandleOverwritten` + `OverwrittenEndTime` BB key
+3. Delete `ApplyPasteA` / `ApplyPasteB` from `APR_AIController`
+4. Refactor `RuntimeTags` → `APR_BaseCharacter` (move from `APR_BaseAI`)
+5. Add `BeginDisorientation()` + `TriggerDisorientation()` to `IPR_AIAbilityTarget`
+6. Wire `BTTask_PR_Disorient` + `bIsDisoriented` BB decorator into BT asset
 
 ---
 
@@ -81,10 +87,9 @@ Three states: `Inactive`, `Active`, `GraceTimer`
 4. Otherwise:
    - Store reference to `StealTarget`
    - Copy target's `SkeletalMesh` → apply to P1's mesh component
-   - Copy target's `RuntimeTags` → add to P1's `GameplayTagContainer`
+   - Copy target's `RuntimeTags` → add to P1's `RuntimeTags` (on `APR_BaseCharacter`)
    - Add `Player.P1.Disguised` tag to P1
-   - Change P1's team ID via `IGenericTeamAgentInterface` → 1
-   - Call `StealTarget->GetAIController()->GetMemoryComponent()->SetConsciousnessState(Frozen)` via interface
+   - Call `StealAppearance()` on target via `IPR_AIAbilityTarget` (sets NPC → Frozen)
    - State → `Active`
    - Fire `BP_OnFaceStealActivated(StealTarget)` (BlueprintImplementableEvent for rope UI)
 
@@ -101,7 +106,7 @@ Three states: `Inactive`, `Active`, `GraceTimer`
 2. Remove stolen `RuntimeTags` from P1
 3. Remove `Player.P1.Disguised` tag
 4. Revert P1 team ID → 0
-5. Set `StealTarget` ConsciousnessState → `Overwritten` (DisorientDuration handles the wake-up)
+5. Call `TriggerDisorientation()` on target via `IPR_AIAbilityTarget` (sets `bIsDisoriented`, `BTTask_PR_Disorient` handles wake-up)
 6. Clear `StealTarget` reference
 7. State → `Inactive`
 8. Fire `BP_OnFaceStealDeactivated()` for UI cleanup
@@ -186,9 +191,12 @@ Target feel:
 
 | System | Status |
 |--------|--------|
-| `APR_AIController::ApplyPasteA/B` | ✅ Done |
+| `APR_AIController::ApplyPasteA/B` | ❌ Deleted — moves to ability components |
 | `UPR_AIMemoryComponent::TakeSnapshot/TakeOwnStateSnapshot` | ✅ Done |
-| `BTTask_PR_HandleFrozen/Overwritten` | ✅ Done |
+| `BTTask_PR_HandleFrozen` | ✅ Done |
+| `BTTask_PR_HandleOverwritten` | ❌ Deleted — replaced by `BTTask_PR_Disorient` |
+| `BTTask_PR_Disorient` | ✅ Done (built 2026-04-26) |
+| `IPR_PlayerAbility` interface | ✅ Done (built 2026-04-26) |
 | `BTService_PR_MindReplaceExpiry` | ✅ Done |
 | `BTService_PR_CheckColleagues` | ✅ Done |
 | `BTService_PR_UpdateAlertFromSight` | ✅ Done |
