@@ -2,13 +2,13 @@
 type: mechanic
 title: FaceSteal — P1 Ability
 created: '2026-04-25'
-updated: '2026-04-25'
+updated: '2026-04-27'
 tags:
   - mechanic
   - p1
   - facesteal
   - ability
-status: active
+status: implementing
 owner: P1
 ---
 
@@ -26,116 +26,114 @@ FaceSteal is **borrowed time under a spatial constraint**. The player isn't powe
 
 ## Full Behaviour Spec
 
-### Activation
-- P1 must be within `FaceStealRange` (config: default 1500 cm) of a valid target NPC
-- Target must have `CanBeTargetedByAbility = true` in their `UPR_EnemyConfig`
-- P1 presses ability input
+### Activation Input
+- P1 presses ability input (E) → enters **Targeting Mode** via `IPR_PlayerAbility::StartTargeting()`
+- P1 confirms target with LMB → `IPR_PlayerAbility::Activate()` fires
 
-### Targeting Mode (button press — before LMB confirm)
+### Targeting Mode
 - Screen edges darken, centre stays bright
-- Glowing reticle VFX at screen centre
-- Line trace from camera centre begins (trace length = component param)
-- Player aims at desired NPC, then presses LMB to confirm
+- Glowing reticle VFX at screen centre (`BP_OnTargetingStarted()` → BP drives VFX)
+- Line trace from camera centre begins (trace length = `UPR_FaceStealComponent::TraceDistance`)
+- Valid NPC in crosshair → white outline appears (`BP_OnTargetFound(Target)`)
+- P1 presses LMB on highlighted NPC to confirm
 
 ### On Activation (LMB confirm on valid NPC)
-1. P1's **third-person SkeletalMesh** swaps to the target NPC's mesh (first-person hands unchanged — game is first-person)
-2. Target NPC's `RuntimeTags` are **copied** onto P1 (e.g. `AI.Type.Guard`, `AI.Faction.Security`)
-3. `Player.P1.Disguised` tag is applied to P1
-4. Target NPC's `ConsciousnessState` → `Frozen`
-5. `AI.State.Frozen` tag applied to target NPC
-6. Rope UI appears between P1 and the frozen NPC (green)
+1. P1's **third-person SkeletalMesh** swaps to the target NPC's mesh (first-person hands unchanged)
+2. Target NPC's `RuntimeTags` (e.g. `AI.Type.Guard`) **copied** onto P1's `RuntimeTags` (on `APR_BaseCharacter`)
+3. Target NPC's `ConsciousnessState` → `Frozen` via `UPR_AIMemoryComponent::SetConsciousnessState()`
+4. Rope UI appears between P1 and the frozen NPC (`BP_OnFaceStealActivated(Target)`)
 
-### While Active (tick every 0.5s)
-- Check distance from P1 to frozen NPC
-- If distance > `FaceStealRange`:
-  - Start **grace timer** (configurable, ~3–5 seconds)
-  - Rope UI starts flashing red, faster as time runs out
-- If distance returns within range before grace timer expires:
-  - Cancel grace timer, rope returns to green
+### While Active
+- Component checks distance from P1 to frozen NPC each tick
+- If distance > `StealRadius`:
+  - Start **grace timer** (`GraceTimerDuration`, default 3s)
+  - `BP_OnRopeWarning(TimeRemaining, MaxTime)` fires each tick — BP drives rope pulse/colour
+- If P1 returns within radius before grace timer expires:
+  - Grace timer cancelled, `BP_OnEnterRadius()` fires — rope returns to normal
 
 ### On Grace Timer Expiry (rope snaps)
-1. P1's mesh reverts to original
+1. P1's mesh reverts to stored `OriginalMesh`
 2. Stolen `RuntimeTags` removed from P1
-3. `Player.P1.Disguised` tag removed from P1
-4. `TriggerDisorientation()` called on NPC — sets `bIsDisoriented` BB key
-5. `BTTask_PR_Disorient` runs: NPC plays wake-up anim, waits `DisorientDuration` (~2 sec)
-6. During disorientation: NPC is unaware, **AlertLevel stays 0** — player's escape window
-7. After disorientation: NPC resumes normal patrol at AlertLevel 0 (no memory of being frozen)
+3. `IPR_AIAbilityTarget::BeginDisorientation()` called on NPC — sets `bIsDisoriented` BB key
+4. `BTTask_PR_Disorient` runs: NPC plays wake-up animation, waits `DisorientDuration` (~2s)
+5. During disorientation: **AlertLevel stays 0** — player escape window
+6. After disorientation: NPC resumes normal patrol, no memory of being frozen
 
 ### On Manual Release (player presses ability again)
-- Same flow as grace timer expiry
+- Same flow as grace timer expiry — `StopTargeting()` / `Deactivate()` called
 
 ### Re-use
 - P1 **can re-steal the same NPC** after the NPC has woken up and resumed patrol
 - Levels are designed so this is required — abilities are the only way to progress
-- No cooldown on re-steal (the NPC walking away and re-entering range is the natural gate)
+- Cooldown on `UPR_FaceStealComponent` (default 15s) gates re-activation
 
 ---
 
 ## Immunity Interaction (Act 2–3)
 
-When `SuspicionLevel >= NPC.SuspicionThreshold`:
+When `UPR_SuspicionSubsystem::SuspicionLevel >= NPC.SuspicionThreshold`:
 - NPC is **immune** to FaceSteal
-- No rope UI appears (player's read: no ability = not available)
-- If P1 attempts activation anyway (edge case): rope appears and **immediately snaps**
-  - NPC enters `Overwritten` disorientation (1–2 sec)
+- `CanActivate()` returns false — no targeting UI shown for immune NPC
+- If P1 attempts anyway (edge case): rope appears, immediately snaps
+  - `BeginDisorientation()` triggered on NPC
   - After disorientation: **AlertLevel → 0.5** (NPC starts searching)
-  - NPC remains immune — no further ability attempts show UI
+  - NPC remains immune while Suspicion stays high
 
 ---
 
 ## Identity Layers
 
-| What changes | When active | When dropped |
+| What changes | While active | On deactivation |
 |---|---|---|
-| P1 third-person mesh | → NPC mesh | → restored |
+| P1 third-person mesh | → NPC mesh | → OriginalMesh restored |
+| P1 `RuntimeTags` | + stolen `AI.Type.*` tags | − removed |
 | P1 team ID | unchanged (stays 0) | unchanged |
-| P1 tags | + stolen AI.Type.* | - removed |
-| `Player.P1.Disguised` | applied | removed |
-| NPC state | Frozen | Disoriented (2s) → Normal |
+| NPC `ConsciousnessState` | `Frozen` | → `Normal` (after disorientation) |
 
-**Result while disguised:** AI perception still fires on P1 (same team 0). Disguise works via **tag check** in `BTService_PR_UpdateAlertFromSight` — if P1 has matching faction tags, AlertLevel delta is suppressed. Officers do a deeper check on the specific tag (Act 2+).
+**How disguise works:** AI perception still fires on P1 (TeamID 0). Disguise functions via tag check in `BTService_PR_UpdateAlertFromSight` — if perceived actor has `Ability.FaceSteal.Active` tag, AlertLevel delta is suppressed. Officers can do a secondary check on AI.Type.* for rank validation (Act 2+).
 
 ---
 
 ## The Rope UI
 
-The rope is the **emotional core** of this ability. It makes the invisible constraint visible.
+The rope is the **emotional core** of this ability — it makes the invisible constraint visible.
 
 | State | Appearance |
-|-------|-----------|
-| Within range, safe | Solid green line P1 ↔ NPC |
+|-------|-----------| 
+| Within radius, safe | Solid green line P1 ↔ NPC |
 | Approaching edge | Green fading to yellow |
-| Outside range, grace timer running | Red, flashing — faster as timer runs out |
+| Outside radius, grace timer running | Red, flashing — faster as timer runs out |
 | Immunity snap | Appears red, immediately breaks (< 0.5 sec) |
 
-- Both players **see the rope** in split-screen
-- P2 seeing the rope creates shared urgency — P2 knows P1's window without being told
+Both players **see the rope** in split-screen. P2 seeing the rope creates shared urgency — P2 knows P1's window without being told.
 
 ---
 
-## Balance Parameters (in `UPR_EnemyConfig`)
+## Balance Parameters
 
-| Parameter | Default | Notes |
-|-----------|---------|-------|
-| `FaceStealRange` | 1500 cm | Radius to maintain disguise |
-| `DisorientDuration` | 1.5 s | NPC wake-up window after rope snaps |
-| `SuspiciousColleagueTime` | 10 s | How long frozen NPC goes unnoticed |
-
-Grace timer duration (rope flash before snap) lives on `UFaceStealComponent` as a component property — not per-enemy-config since it's a player feel parameter.
+| Parameter | Location | Default | Notes |
+|-----------|----------|---------|-------|
+| `TraceDistance` | `UPR_FaceStealComponent` | 2000 cm | Line trace reach in targeting mode |
+| `StealRadius` | `UPR_FaceStealComponent` | 1500 cm | Range P1 must stay within while active |
+| `GraceTimerDuration` | `UPR_FaceStealComponent` | 3 s | Rope flash window before snap |
+| `CooldownDuration` | `UPR_FaceStealComponent` | 15 s | Time before ability can activate again |
+| `DisorientDuration` | `UPR_EnemyConfig` | 1.5 s | NPC wake-up window after rope snaps |
+| `SuspiciousColleagueTime` | `UPR_EnemyConfig` | 10 s | How long frozen NPC goes unnoticed by colleagues |
 
 ---
 
 ## Open Design Questions (Act 2+)
 
-- Can P1 steal an Officer? (Officer immune at high suspicion, but available at low — yes)
-- Does wearing an Officer's face open doors a Guard face wouldn't? (Future)
-- Can P1 steal a Civilian? (Probably not useful mechanically — Civilians don't patrol)
+- Can P1 steal an Officer? (Immune at high suspicion, available at low — yes)
+- Does an Officer's face open areas a Guard face wouldn't? (Future — tag-based area restrictions)
+- Can P1 steal a Civilian? (Probably not useful — Civilians don't patrol)
+- P2 Paste A on a Frozen NPC? (Breaks P1 disguise — needs cooperative design pass)
 
 ---
 
 ## Related
-- [[Telepathy]] — P2's Copy must precede FaceSteal if Paste A recovery is needed
-- [[AI_Social_Behavior]] — frozen NPC creates a social time clock
+- [[Telepathy]] — P2 Copy must precede FaceSteal if Paste A recovery is needed
+- [[AI_Social_Behavior]] — frozen NPC creates a social time clock for colleagues
+- [[Consciousness State Machine]] — Frozen state technical detail
 - [[GDD_Nocturne]] — full game context
-- **Code:** `UFaceStealComponent` on `APR_BasePlayer` — PR-87
+- **Code:** `UPR_FaceStealComponent` (`Public/Mechanics/Abilities/PR_FaceStealComponent.h`) — PR-87
