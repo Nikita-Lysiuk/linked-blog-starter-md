@@ -15,6 +15,23 @@ status: developing
 
 ---
 
+## 2026-05-16 — FACESTEAL CPP COMPLETE
+
+**Operation:** Full implementation of `UPR_FaceStealComponent.cpp` + design grill session
+**Output:** [[2026-05-16_FaceStealComponent_CPP]]
+
+**Completed:**
+- All 7 interface methods implemented (`StartTargeting`, `StopTargeting`, `Activate`, `Deactivate`, `CanActivate`, `IsActive`, `IsTargeting`)
+- Input registration system added (follows `UPR_GrappleHookComponent` pattern)
+- `OnToggleInput` 3-state E key wrapper
+- `StolenMesh`/`OriginalMesh` split for radius swap correctness
+- Disorientation: `Deactivate` sets `bIsDisoriented=true` on BB + unfreezes NPC; BT task owns the rest
+- 3 minor compile fixes still pending (see hot.md)
+
+**Next:** UE Editor — Blueprint subclass, input assets, Niagara rope, VFX, HUD
+
+---
+
 ## 2026-04-18 — CODEBASE SYNC + CORRECTIONS
 
 **Operation:** Full wiki sync against actual Nocturne C++ codebase

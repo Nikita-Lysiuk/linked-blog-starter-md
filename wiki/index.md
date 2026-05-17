@@ -1,70 +1,143 @@
 ---
 type: meta
-title: "Technical Intelligence & Game Design Engine — Home"
-created: 2026-04-18
-updated: 2026-04-18
-tags:
-  - meta
-  - index
-  - homepage
-status: developing
+title: "Nocturne — Dashboard"
+updated: 2026-04-27
+tags: [meta, dashboard]
+status: active
 ---
 
-# Technical Intelligence & Game Design Engine
+# 🌑 Nocturne — Project Dashboard
 
-> **Lead Systems Architect** — finding contradictions in game logic, gaps in software patterns, and maintaining compounding knowledge across all engineering sessions.
+**Studio:** Persival &nbsp;·&nbsp; **Engine:** Unreal Engine 5.6 &nbsp;·&nbsp; **Sprint:** AI + Ability Sprint &nbsp;·&nbsp; **Updated:** 2026-04-27
 
 ---
 
-## Project Persival
+## 🔥 Active Now
 
-![[kanban-persival]]
-
----
-
-## Learning Campus
-
-![[kanban-campus]]
-
----
-
-## Quick Access
-
-| Area | Index | Hot File |
-|------|-------|----------|
-| Game Design Hub | [[game-design/_index]] | [[hot]] |
-| Pattern Library | [[patterns/_index]] | [[ECS]] |
-| ECS Registry | [[ecs/_index]] | [[ecs/entities/_index]] |
-| Reference Library | [[sources/Reference Library]] | [[sources/_index]] |
-| Architecture Decisions | [[decisions/_index]] | [[meta/logbook]] |
-| Learning: Concepts | [[concepts/_index]] | [[concepts/Collisions]] |
-| Central Dashboard | [[meta/Dashboard]] | [[meta/technical-debt]] |
+> [!danger]+ 🔥 Hot Context — Read This First
+> Sprint context, current blockers, and what to pick up next.
+> 
+> **Active milestone:** `UPR_FaceStealComponent` — header done, implementation pending
+> **P1 next:** Implement `.cpp` method bodies per locked design
+> **P2 next:** Begin `UPR_TelepathyComponent` after FaceSteal ships
+> 
+> → [[hot|Open Hot Page →]]
 
 ---
 
-## Catalog
+## 📋 Sprint Board
 
-| Domain | Index | Count |
-|--------|-------|-------|
-| Sources | [[sources/_index]] | 1 |
-| Concepts | [[concepts/_index]] | 1 |
-| Entities | [[entities/_index]] | 6 |
-| Patterns | [[patterns/_index]] | 3 |
-| Game Design | [[game-design/_index]] | 7 |
-| ECS Registry | [[ecs/_index]] | 0 |
-| Decisions (ADRs) | [[decisions/_index]] | 0 |
-| Questions | [[questions/_index]] | 0 |
-| Comparisons | [[comparisons/_index]] | 0 |
+> [!bug]+ 🔨 In Progress
+> - [ ] `UPR_FaceStealComponent.cpp` — implement all 7 interface methods + timer bodies
+> - [ ] `BTService_PR_UpdateAlertFromSight.cpp` — add `Ability.FaceSteal.Active` tag check to `TickNode`
+> - [ ] Fix `BLueprintNativeEvent` typo in `PR_AIAbilityTarget.h` line 62
+> - [ ] Remove stale `StealAppearance` / `PasteConsciousness` comments from `PR_AIAbilityTarget.h`
+
+> [!success]+ ✅ Done This Sprint
+> - [x] `IPR_PlayerAbility` — all 7 methods defined and reviewed
+> - [x] `UPR_FaceStealComponent.h` — header complete (enum, class name, ClassGroup fixed)
+> - [x] `DefaultGameplayTags.ini` — pruned to 5 canonical tags
+> - [x] `APR_BaseCharacter` — `RuntimeTags` + 4 methods migrated from `APR_BaseAI`
+> - [x] `BTService_PR_UpdateAlertFromSight.h` — node memory cleaned, tag moved to file scope
+> - [x] Wiki — 9 pages updated, `Disguise Steal.md` deleted (superseded)
+
+> [!warning]+ ⏭ Up Next
+> - [ ] `UPR_TelepathyComponent.h` — design session + header
+> - [ ] `BTService` — full sight alert math (distanceFactor × angleFactor × lightFactor)
+> - [ ] AI Sprint review + demo prep
 
 ---
 
-## System Files
+## 🎮 Mechanics
 
-| File | Purpose |
-|------|---------|
-| [[hot]] | Hot cache — current sprint + roadblocks |
-| [[log]] | Append-only operation log |
-| [[overview]] | Executive summary |
-| [[meta/Dashboard]] | Dataview dashboard — active tasks + debt |
-| [[meta/logbook]] | Technical log — daily decisions |
-| [[meta/technical-debt]] | #fixme / #refactor tracker |
+> [!tip]+ 👤 FaceSteal — P1 Core Ability
+> Steal enemy mesh + GameplayTags. Social stealth via tag rank/role system.
+> Two-phase: **E** → lock target (`Targeting`) · **LMB** → confirm (`Active`)
+> States: `Inactive → Targeting → Active → GraceTimer`
+> 
+> → [[game-design/mechanics/FaceSteal|FaceSteal Design →]]
+
+> [!tip]+ 🧠 Telepathy — P2 Core Ability
+> Manipulate AI `ConsciousnessState`. States: `Normal → Frozen → Replaced`.
+> Copy/Paste = full Blackboard state transfer. Replaced runs normal BT with expiry service.
+> 
+> → [[game-design/mechanics/Telepathy|Telepathy Design →]]
+
+> [!tip]+ 🤖 AI Social Behavior
+> GameplayTag-driven social restriction. Guards fooled by matching tags.
+> Officers run secondary validation if `SuspicionLevel` is high.
+> 
+> → [[game-design/mechanics/AI_Social_Behavior|AI Social Behavior →]]
+
+> [!tip]+ 📋 Mind Copy
+> P2's Copy/Paste — snapshots and transfers the full Blackboard state to a Replaced AI.
+> 
+> → [[game-design/mechanics/Mind Copy|Mind Copy Design →]]
+
+---
+
+## 🏗️ Technical Architecture
+
+> [!abstract]+ 🤖 AI System Architecture
+> Perception pipeline, alert ramping, BT service layout, `UPR_AIMemoryComponent` rollback.
+> 
+> → [[game-design/technical-architecture/AI System Architecture|AI System Architecture →]]
+
+> [!abstract]+ 🔌 Ability System Interface
+> `IPR_PlayerAbility` (7 methods) + `IPR_AIAbilityTarget` (query/access only — SOLID).
+> New abilities only implement `IPR_PlayerAbility`. AI interface never changes.
+> 
+> → [[game-design/technical-architecture/Ability System Interface|Ability System Interface →]]
+
+> [!abstract]+ 🧠 Consciousness State Machine
+> `Normal → Frozen → Replaced` transitions, BT branch consequences, expiry service design.
+> 
+> → [[game-design/technical-architecture/Consciousness State Machine|Consciousness State Machine →]]
+
+> [!abstract]+ 🔗 Universal Ability System — ADR
+> Architecture decision record for cross-cutting ability ↔ AI interaction pattern.
+> 
+> → [[game-design/technical-architecture/Universal Ability System Interface|ADR: Universal Ability System →]]
+
+---
+
+## 💻 Code Entities
+
+| Entity | Role | Status |
+|--------|------|--------|
+| [[entities/APR_BaseAI\|APR_BaseAI]] | NPC pawn base · perception owner · BT host | Stable |
+| [[entities/APR_BasePlayer\|APR_BasePlayer]] | Player pawn · Enhanced Input · ability host | Updated |
+| [[entities/APR_AIController\|APR_AIController]] | BT runner · alert escalation | Stable |
+| [[entities/IPR_AIAbilityTarget\|IPR_AIAbilityTarget]] | Query interface — ability ↔ AI bridge | ⚠ Typo on L62 |
+| [[entities/UPR_AIMemoryComponent\|UPR_AIMemoryComponent]] | 10s Blackboard rollback (Memento pattern) | Stable |
+| [[entities/UPR_EnemyConfig\|UPR_EnemyConfig]] | Per-NPC DataAsset config · ability immunity flags | Stable |
+
+---
+
+## 📐 Design Documents
+
+> [!note]- 📖 GDD — Nocturne
+> Full Game Design Document. Vision, protagonists, design pillars, core loop.
+> 
+> → [[game-design/GDD_Nocturne|Open GDD →]]
+
+> [!note]- 📋 Ability Sprint Implementation Plan
+> Agreed implementation order: `IPR_PlayerAbility → FaceSteal → Telepathy → AI polish`
+> 
+> → [[game-design/AbilitySprint_Implementation|Open Sprint Plan →]]
+
+---
+
+## 📝 Sessions
+
+| Date | Topic |
+|------|-------|
+| [[sessions/2026-04-27_FaceStealComponent_Design\|2026-04-27]] | FaceStealComponent — full design grill session, header finalized |
+| [[sessions/2026-04-26_FaceSteal_Sprint\|2026-04-26]] | FaceSteal Sprint kickoff, tag system redesign |
+
+---
+
+## 🗂️ Meta
+
+> [!info] Quick Links
+> [[meta/overview|🗺 Canvas Overview]] &nbsp;·&nbsp; [[meta/lint-report-2026-04-27|🔍 Lint Report (2026-04-27)]] &nbsp;·&nbsp; [[log|📜 Change Log]] &nbsp;·&nbsp; [[decisions/_index|📑 ADR Index]]
