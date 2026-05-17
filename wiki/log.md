@@ -1,8 +1,8 @@
 ---
 type: meta
 title: Operation Log
-created: '2026-04-18T00:00:00.000Z'
-updated: '2026-04-18T00:00:00.000Z'
+created: "2026-04-18T00:00:00.000Z"
+updated: "2026-05-17"
 tags:
   - meta
   - log
@@ -15,20 +15,57 @@ status: developing
 
 ---
 
+## 2026-05-17 — FACESTEAL C++ FULLY COMPLETE
+
+**Operation:** Final code review pass — BTService tag check confirmed, MemoryComponent refactored
+**Output:** [[2026-05-16_FaceStealComponent_CPP]] (final)
+
+**Completed this session:**
+- `BTService_PR_UpdateAlertFromSight` — `FaceStealActiveTag` file-scope static, early return in `TickNode` when perceived target carries the tag. Alert math skipped while P1 wears a face ✓
+- `UPR_AIMemoryComponent` fully refactored:
+  - No internal `ConsciousnessState` field — BB is BT authority (Int key)
+  - `UPROPERTY(ReplicatedUsing)` field added as client replication channel only
+  - `SetConsciousnessState` writes field + BB atomically, fires delegate on server; `OnRep` fires it on clients
+  - `GetLifetimeReplicatedProps` + `DOREPLIFETIME` wired
+  - `OnRep` signature fixed to single param `(EAIConsciousnessState OldState)`
+  - No-op guard uses field (not BB lookup)
+  - Two separate snapshots: donor (P2 Copy) + own-state (Paste B pre-save)
+- Debug instrumentation added to `UPR_FaceStealComponent` — all marked `TODO: DEBUG`
+- `AbilityComponent` (`TScriptInterface<IPR_PlayerAbility>`) removed from `APR_BasePlayer`
+- Input confirmed working in PIE: E = Toggle, LMB = Confirm, mesh swap functional, disorient flow correct
+- **FaceSteal C++ phase: COMPLETE. Moving to UE Editor.**
+
+**Next:** BB key (`ConsciousnessState` Int) → BT Decorator (Frozen abort) → NPC outline → Targeting vignette → Niagara rope
+
+---
+
+## 2026-05-17 — FACESTEAL CPP COMPLETE + JIRA UPDATED
+
+**Operation:** Final compile fixes, debug instrumentation, architecture cleanup
+**Output:** [[2026-05-16_FaceStealComponent_CPP]] (appended)
+
+**Completed:**
+- All 3 compile fixes: confirm binding guard, cooldown BP event categories, unused include
+- Debug instrumentation: `pr.FaceSteal.Debug` CVar, trace draw, steal radius circle, on-screen state messages, verbose `CanActivate` log — all marked `TODO: DEBUG`
+- `AbilityComponent` removed from `APR_BasePlayer`
+- Input design locked: both IAs use Pressed trigger + `ETriggerEvent::Started`
+- **Jira PR-95 → Done** (was tracked as PR-87 — corrected)
+
+**Next:** UE Editor — BP, input assets, Niagara rope, VFX, HUD cooldown bar
+
+---
+
 ## 2026-05-16 — FACESTEAL CPP COMPLETE
 
 **Operation:** Full implementation of `UPR_FaceStealComponent.cpp` + design grill session
 **Output:** [[2026-05-16_FaceStealComponent_CPP]]
 
 **Completed:**
-- All 7 interface methods implemented (`StartTargeting`, `StopTargeting`, `Activate`, `Deactivate`, `CanActivate`, `IsActive`, `IsTargeting`)
-- Input registration system added (follows `UPR_GrappleHookComponent` pattern)
+- All 7 interface methods implemented
+- Input registration system (follows GrappleHook pattern)
 - `OnToggleInput` 3-state E key wrapper
 - `StolenMesh`/`OriginalMesh` split for radius swap correctness
-- Disorientation: `Deactivate` sets `bIsDisoriented=true` on BB + unfreezes NPC; BT task owns the rest
-- 3 minor compile fixes still pending (see hot.md)
-
-**Next:** UE Editor — Blueprint subclass, input assets, Niagara rope, VFX, HUD
+- Disorientation: `Deactivate` sets BB key + unfreezes NPC; BT task owns the rest
 
 ---
 
@@ -38,64 +75,21 @@ status: developing
 **Trigger:** User provided GDD + scanned `Source/Nocturne/` for ground truth
 
 **Corrections (fictional content removed):**
-- `Disguise Steal.md` — previous version described mesh swap + `UDisguiseComponent` + `IAbilitySystem` interface + cooldown/duration timers. **None of that exists in code.** Rewritten to reflect actual mechanism: GameplayTag injection (`APR_BaseAI::RuntimeTags`) + `EAIConsciousnessState::Frozen` + `BTTask_PR_HandleFrozen`. No mesh swap. No custom ability manager.
-- `Ability System Interface.md` — described nonexistent `IAbilitySystem` with `ExecuteAbility/CancelAbility`. Rewritten to document the real interface: `IPR_AIAbilityTarget` (3 methods: `CanBeTargetedByAbility`, `GetMemoryComponent`, `GetCurrentConsciousnessState`).
-- `Universal Ability System Interface.md` — described nonexistent `UAbilityManagerComponent`. Rewritten as ADR explaining why BT-driven state was chosen over the discarded custom ability manager proposal.
-- `hot.md` — purged references to fictional `IAbilitySystem` active work. Updated with correct implementation facts.
+- `Disguise Steal.md` — rewritten to reflect actual mechanism
+- `Ability System Interface.md` — rewritten to document real `IPR_AIAbilityTarget`
+- `Universal Ability System Interface.md` — rewritten as ADR
 
-**New pages created:**
-- `wiki/game-design/mechanics/Mind Copy.md` — P2 ability (Copy, Paste A, Paste B — full flow with BB keys, timing, expiry service)
-- `wiki/game-design/technical-architecture/AI System Architecture.md` — full system map, class hierarchy, all 4 ability flows, design principle rationale, replication notes
-- `wiki/game-design/technical-architecture/Consciousness State Machine.md` — state transition diagram, all 4 states, P1+P2 interaction edge cases
-- `wiki/entities/IPR_AIAbilityTarget.md` — interface entity page
-- `wiki/entities/APR_BaseAI.md` — base NPC pawn entity page
-- `wiki/entities/UPR_AIMemoryComponent.md` — consciousness + snapshot component
-- `wiki/entities/APR_AIController.md` — P2 entry points, perception, alert
-- `wiki/entities/UPR_EnemyConfig.md` — DataAsset, all config domains
-- `wiki/entities/APR_BasePlayer.md` — player base class
-
-**Updated indexes:**
-- `wiki/entities/_index.md` — 6 entities listed
-- `wiki/game-design/technical-architecture/_index.md` — 5 architecture docs listed
-- `wiki/hot.md` — sprint context synced to code reality
+**New pages:** Mind Copy, AI System Architecture, Consciousness State Machine, 6 entity pages
 
 ---
 
 ## 2026-04-18 — DEEP REFACTOR
 
 **Operation:** Deep vault refactor + content generation
-**Changes:**
-- Git initialized at vault root; `.gitignore` created; obsidian-git reconfigured (15-min auto-commit, basePath: root)
-- `wiki/index.md` refactored: two Kanban embeds + quick access grid + catalog
-- Created: `wiki/meta/kanban-persival.md` (Project Persival board)
-- Created: `wiki/meta/kanban-campus.md` (Learning Campus board)
-- Created: `wiki/game-design/mechanics/Disguise Steal.md` (UE5 stealth mechanic)
-- Created: `wiki/game-design/technical-architecture/Universal Ability System Interface.md`
-- Created: `wiki/game-design/technical-architecture/Ability System Interface.md` (IAbilitySystem C++ interface)
-- Created: `wiki/sources/Reference Library.md` (11 books + 3 papers)
-- Created: `wiki/concepts/Collisions.md` (AABB, Sphere, SAT, GJK + Collision Sandbox project)
-- Created: `wiki/meta/Dashboard.md` (Dataview queries + quick access)
-- **Flagged:** `Git/.git` deletion deferred — has real commits + remote. Confirm before deleting.
+**Changes:** Git init, kanban boards, GDD pages, Reference Library, Collisions concept, Dashboard
 
 ---
 
 ## 2026-04-18 — SCAFFOLD
 
-**Operation:** Full vault scaffold
-**Mode:** B+C+E Hybrid (Repository + Engineering + Research)
-**Purpose:** Technical Intelligence & Game Design Engine
-
-**Created:**
-- `CLAUDE.md` — Lead Systems Architect persona
-- `wiki/index.md`, `wiki/log.md`, `wiki/hot.md`, `wiki/overview.md`
-- `wiki/sources/`, `wiki/concepts/`, `wiki/entities/`
-- `wiki/patterns/` — Singleton, Observer, ECS seeds
-- `wiki/game-design/` — mechanics, loop-logic, level-design, technical-architecture
-- `wiki/ecs/` — entities, components
-- `wiki/decisions/`, `wiki/questions/`, `wiki/comparisons/`
-- `wiki/meta/` — dashboard.base, logbook, technical-debt
-- `_templates/` — 9 Templater templates
-- `.obsidian/snippets/vault-colors.css`
-- Canvas templates: game-flow, skill-tree
-
-**Status:** Ready for first ingest.
+**Operation:** Full vault scaffold · Mode: B+C+E Hybrid · **Status:** Ready for first ingest.
