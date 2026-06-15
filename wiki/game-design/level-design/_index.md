@@ -17,7 +17,15 @@ page_count: 0
 
 ## All Levels
 
-_None yet. Template: `_templates/level.md`_
+| Level | Status | Summary |
+|-------|--------|---------|
+| [[Level_01_Street_To_Mansion\|Level 01 — Street to Mansion]] | `concept` | Tutorial level. Street → Clockmaker Apartment → Courtyard → Mansion entrance. |
+
+### Puzzles
+
+| Puzzle | Level | Status |
+|--------|-------|--------|
+| [[Puzzle_Clockmaker_Apartment\|Clockmaker Apartment]] | Level 01 | `concept` |
 
 ---
 
@@ -35,7 +43,11 @@ Every level note must contain:
 
 | Mechanic | Levels |
 |---------|--------|
-| _None yet_ | — |
+| FaceSteal | Level 01 (courtyard social stealth) |
+| Telepathy | Level 01 (courtyard guard removal) |
+| Grapple Hook | Level 01 (apartment attic entry, courtyard traversal) |
+| Dumbwaiter (item passing) | Level 01 (clockmaker puzzle) |
+| Simultaneous Activation | Level 01 (clockmaker puzzle Beat 3) |
 
 ## Related
 - [[wiki/game-design/mechanics/_index]] — mechanics featured in levels

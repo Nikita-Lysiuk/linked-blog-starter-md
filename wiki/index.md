@@ -114,6 +114,26 @@ status: active
 
 ---
 
+## 🗺️ Level Design
+
+> [!note]+ 🏙️ Level 01 — Street to Mansion
+> Tutorial level. Three zones: Street (stealth intro) → Clockmaker Apartment (co-op puzzle + lore) → Inner Courtyard (escalation). Two-tier split: P1 ground / P2 rooftops throughout.
+> Status: `concept`
+>
+> → [[game-design/level-design/Level_01_Street_To_Mansion|Level 01 Design →]]
+> → [[game-design/level-design/Puzzle_Clockmaker_Apartment|Clockmaker Apartment Puzzle →]]
+
+---
+
+## 🌍 World & Lore
+
+> [!note]+ 📜 World Lore
+> Dark industrial steampunk city. Dictator purged all gifted people 100 years ago — current generation has no memory they existed. Heroes are survivors' descendants working as thieves.
+>
+> → [[game-design/World_Lore|World Lore →]]
+
+---
+
 ## 📐 Design Documents
 
 > [!note]- 📖 GDD — Nocturne
