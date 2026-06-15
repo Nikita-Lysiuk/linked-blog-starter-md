@@ -132,6 +132,7 @@ status: active
 
 | Date | Topic |
 |------|-------|
+| [[sessions/2026-06-15_FaceSteal_VFX_UI_Niagara\|2026-06-15]] | FaceSteal VFX + UI + Niagara rope — outline material, HUD widget, C++ Niagara integration |
 | [[sessions/2026-04-27_FaceStealComponent_Design\|2026-04-27]] | FaceStealComponent — full design grill session, header finalized |
 | [[sessions/2026-04-26_FaceSteal_Sprint\|2026-04-26]] | FaceSteal Sprint kickoff, tag system redesign |
 

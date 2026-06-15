@@ -17,9 +17,12 @@ tags:
 
 1. **Blackboard asset** — add `ConsciousnessState` as **Int** key
 2. **Behavior Tree** — add Blackboard Decorator at root: `ConsciousnessState == 1 (Frozen)`, Abort Self — AI stops all tasks when FaceSteal activates
-3. **NPC outline** — `BP_OnTargetFound` → enable Custom Depth on NPC mesh · `BP_OnTargetLost` → disable
+3. ~~**NPC outline**~~ ✅ Done — `M_FaceSteal_Outline` post-process material, Custom Depth hooks wired in BP
 4. **Targeting vignette** — `BP_OnTargetingStarted` → post-process effect · `BP_OnTargetingCancelled` → remove
-5. **Niagara rope** — `BP_OnFaceStealActivated` → spawn Beam emitter, update start/end each tick · `BP_OnRopeWarning` → drive color/width via User Variables · `BP_OnRopeSnapped` → burst + disable
+5. ~~**Niagara rope base**~~ ✅ Done — `NS_FaceStealRope` working, C++ drives start/end each tick
+6. **Niagara rope states** — Deploy / GraceTimer (red) / Snap / Cancel animations still needed
+7. **Ribbon material** — replace DefaultRibbonMaterial with custom purple glow + noise material
+8. **HUD wiring** — `WBP_FaceStealHUD` built; connect `OnCooldownUpdated` / `OnActivated` / `OnRopeWarning` events from BP_FaceStealComponent
 
 ## FaceSteal C++ — COMPLETE
 
@@ -54,8 +57,8 @@ All code done and tested:
 |-----|---------|--------|
 | PR-95 | Implementation of UFaceStealComponent | **Done** |
 | PR-96 | Wire logic with AI System | In Progress |
-| PR-97 | UI for Ability | To Do |
-| PR-98 | VFX for Ability | To Do |
+| PR-97 | UI for Ability | In Progress |
+| PR-98 | VFX for Ability | In Progress |
 | PR-99 | Sounds for Ability | To Do |
 | PR-100 | Test ability | To Do |
 | PR-94 | Place APR_LightZone volumes | To Do |
